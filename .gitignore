@@ -5,6 +5,7 @@ desktop.ini
 # python generated files
 .venv
 .idea/
+.vscode/
 __pycache__/
 
 # media files

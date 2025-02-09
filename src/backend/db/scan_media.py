@@ -6,9 +6,7 @@ from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.wavpack import WavPack
 from mutagen.mp4 import MP4
-
-MEDIA_DIR = "media"
-DB_PATH = "media.db"
+from backend.config import MEDIA_DIR, DB_PATH, METADATA_KEYS, SUPPORTED_EXTS
 
 
 def extract_metadata(file_path: str) -> dict:
@@ -26,13 +24,14 @@ def extract_metadata(file_path: str) -> dict:
             raise ValueError(
                 f"Unsupported file format for {file_path}. Extension must be one of: .mp3, .flac, .wav, .m4a"
             )
-        return {
-            "title": audio.get("title", ["Unknown"])[0],
-            "artist": audio.get("artist", ["Unknown"])[0],
-            "album": audio.get("album", ["Unknown"])[0],
-            "genre": audio.get("genre", ["Unknown"])[0],
-            "duration": audio.info.length if audio.info else 0,
+        ret = {
+            key: audio.get(key, ["Unknown"])[0]
+            for key in METADATA_KEYS
+            if key != "duration"
         }
+        ret["duration"] = audio.info.length if audio.info else 0
+        ret["file_path"] = file_path
+        return ret
     except Exception as e:
         logging.error(f"Failed to read metadata for {file_path}: {e}")
         return None
@@ -43,28 +42,21 @@ def scan_and_store() -> None:
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    target_exts = [".mp3", ".wav", ".flac", ".m4a"]
-
+    keys_with_path = ["file_path"] + METADATA_KEYS
     for root, _, files in os.walk(MEDIA_DIR):
         for file in files:
-            if any(file.lower().endswith(ext) for ext in target_exts):
+            if any(file.lower().endswith(ext) for ext in SUPPORTED_EXTS):
                 file_path = os.path.join(root, file)
                 metadata = extract_metadata(file_path)
 
                 if metadata:
+                    cmd = f"""
+                        INSERT OR IGNORE INTO music ({", ".join(keys_with_path)})
+                        VALUES ({", ".join(["?"] * len(keys_with_path))})
+                    """
+                    print(cmd)
                     cursor.execute(
-                        """
-                        INSERT OR IGNORE INTO music (file_path, title, artist, album, genre, duration)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                        (
-                            file_path,
-                            metadata["title"],
-                            metadata["artist"],
-                            metadata["album"],
-                            metadata["genre"],
-                            metadata["duration"],
-                        ),
+                        cmd, tuple([metadata[key] for key in keys_with_path])
                     )
 
     conn.commit()

@@ -16,6 +16,7 @@ proj/
 │── media/                    # Media folder (stores audio files)
 │── src/                      # Source code directory
 │   ├── backend/                  # Backend (mostly python ig)
+│   │   ├── config.py                 # Configurations
 │   │   ├── db/                       # Database-related scripts
 │   │   │   ├── schema.py                 # Database schema setup
 │   │   │   ├── scan_media.py             # Script to scan media folder
