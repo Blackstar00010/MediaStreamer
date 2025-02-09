@@ -19,7 +19,7 @@ proj/
 │   │   ├── db/                       # Database-related scripts
 │   │   │   ├── schema.py                 # Database schema setup
 │   │   │   ├── scan_media.py             # Script to scan media folder
-│   │   ├── api/                      # FastAPI or Flask API
+│   │   ├── api/                      # FastAPI
 │   │   │   ├── main.py                   # Main backend API entry point
 │   │   │   ├── routes.py                 # API routes
 │   │   │   ├── models.py                 # Database models (if using SQLAlchemy)
@@ -50,7 +50,6 @@ proj/
     - Periodically scan for new, deleted, or modified files.
 - Phase 2: Backend
   - Set Up a Web Server
-    - Choose backend: FastAPI, Express, or Django
     - Implement REST APIs for listing, searching, and playing.
   - Implement Audio Streaming
     - Use HTTP range requests to allow seeking within songs.
