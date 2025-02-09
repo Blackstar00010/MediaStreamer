@@ -41,19 +41,19 @@ proj/
 
 ## Roadmap
 - Phase 1: Basic File Management & Scanning
-    1. Structure the whole project
-    2. Set the Target Directory
-       - Make a folder named "media" to store all the media files.
-       - Optional: allow dynamic changes to this directory; configuration file or some UI.
-    3. Scan the Directory for Music Files
-        - Store metadata (filename, path, artist, album, duration, etc.) in db (sqlite) using python mutagen
-        - Periodically scan for new, deleted, or modified files.
+  - Structure the whole project
+  - Set the Target Directory
+    - Make a folder named "media" to store all the media files.
+    - Optional: allow dynamic changes to this directory; configuration file or some UI.
+  - Scan the Directory for Music Files
+    - Store metadata (filename, path, artist, album, duration, etc.) in db (sqlite) using python mutagen
+    - Periodically scan for new, deleted, or modified files.
 - Phase 2: Backend
-    4.	Set Up a Web Server
-        - Choose backend: FastAPI, Express, or Django
-        - Implement REST APIs for listing, searching, and playing.
-    5.	Implement Audio Streaming
-        - Use HTTP range requests to allow seeking within songs.
-        - Stream audio using FFmpeg if transcoding is needed.
+  - Set Up a Web Server
+    - Choose backend: FastAPI, Express, or Django
+    - Implement REST APIs for listing, searching, and playing.
+  - Implement Audio Streaming
+    - Use HTTP range requests to allow seeking within songs.
+    - Stream audio using FFmpeg if transcoding is needed.
 - Phase 3: Frontend UI & Player
 - Phase 4: Extra Features
