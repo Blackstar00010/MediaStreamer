@@ -1,4 +1,12 @@
+# os generated files
 desktop.ini
 .DS_Store
 
+# python generated files
+.venv
+.idea/
+__pycache__/
+
+# media files
 media/
+media.db
