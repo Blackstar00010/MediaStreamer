@@ -57,3 +57,5 @@ proj/
     - Stream audio using FFmpeg if transcoding is needed.
 - Phase 3: Frontend UI & Player
 - Phase 4: Extra Features
+  - Search feature
+  - Rating (absolute or relative such as ELO)
