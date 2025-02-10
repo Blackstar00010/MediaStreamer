@@ -1,0 +1,34 @@
+.App {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 100vh;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.navbar {
+  display: flex;
+  gap: 20px;
+  padding: 10px;
+  width: 100%;
+  justify-content: center;
+  color: inherit;
+}
+.navbar a {
+  color: inherit;
+  text-decoration: none;
+  /* larger font size */
+  font-size: 1.5rem;
+  margin: 0 10px;
+}
+
+.player {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background-color: #222;
+  padding: 10px;
+  box-sizing: border-box;
+}

@@ -1,7 +1,9 @@
 import os
 
 # Define project root dynamically (useful if the project moves)
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+BE_PATH = os.path.abspath(os.path.dirname(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BE_PATH, ".."))
+# PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 # Define important paths
 MEDIA_DIR = os.path.join(PROJECT_ROOT, "media")  # Media files directory
