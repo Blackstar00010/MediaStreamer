@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
 
 const AudioPlayer = ({ songID }) => {
     const audioRef = useRef(null);
@@ -49,22 +51,11 @@ const AudioPlayer = ({ songID }) => {
 
     return (
         <div style={styles.playerContainer}>
-            {/* <audio ref={audioRef} src={songUrl} preload="metadata"></audio> */}
             <audio ref={audioRef} preload="metadata"></audio>
-
-            <button onClick={togglePlay} style={styles.button}>
-                {isPlaying ? "⏸" : "▶️"}
-            </button>
-            {/* TODO: use font awesome
-            npm install @fortawesome/react-fontawesome @fortawesome/free-solid-svg-icons
-            then do
-            import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-            import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
 
             <button onClick={togglePlay} style={styles.button}>
                 <FontAwesomeIcon icon={isPlaying ? faPause : faPlay} />
             </button>
-            */}
 
             <input
                 type="range"
