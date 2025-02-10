@@ -1,17 +1,25 @@
 import React, { useState, useRef, useEffect } from "react";
 
-const AudioPlayer = ({ songUrl }) => {
+const AudioPlayer = ({ songID }) => {
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [volume, setVolume] = useState(1.0);
 
     useEffect(() => {
+        if (audioRef.current && songID) {
+            audioRef.current.src = `http://127.0.0.1:8000/stream/${songID}`;
+            setIsPlaying(false);
+            setProgress(0);
+        }
+    }, [songID]);
+
+    useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
 
         const updateProgress = () => {
-            setProgress((audio.currentTime / audio.duration) * 100);
+            setProgress((audio.currentTime / audio.duration) * 100 || 0);
         };
 
         audio.addEventListener("timeupdate", updateProgress);
@@ -41,7 +49,8 @@ const AudioPlayer = ({ songUrl }) => {
 
     return (
         <div style={styles.playerContainer}>
-            <audio ref={audioRef} src={songUrl} preload="metadata"></audio>
+            {/* <audio ref={audioRef} src={songUrl} preload="metadata"></audio> */}
+            <audio ref={audioRef} preload="metadata"></audio>
 
             <button onClick={togglePlay} style={styles.button}>
                 {isPlaying ? "⏸" : "▶️"}

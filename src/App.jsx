@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import AudioPlayer from "./components/AudioPlayer";
 import MainPage from "./pages/MainPage";
@@ -8,6 +8,7 @@ import SettingsPage from "./pages/SettingsPage";
 import "./App.css";
 
 const App = () => {
+    const [currentSongID, setCurrentSongID] = useState(1648);
     return (
         <Router>
             <div className="App">
@@ -17,19 +18,20 @@ const App = () => {
                     <Link to="/">Rate</Link>
                 </nav>
 
-                <h1>Media Streamer</h1>
-
                 <Routes>
-                    <Route path="/" element={<MainPage />} />
+                    <Route path="/" element={<MainPage setCurrentSongID={setCurrentSongID} />} />
                     <Route path="/album/:id" element={<AlbumPage />} />
                     <Route path="/media/:id" element={<MediaPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                 </Routes>
 
                 {/* Fixed, full-width Audio Player */}
-                <div className="player">
-                    <AudioPlayer songUrl="http://127.0.0.1:8000/stream/1648" />
-                </div>
+                {
+                    currentSongID &&
+                    <div className="player">
+                        <AudioPlayer songID={currentSongID} />
+                    </div>
+                }
             </div>
         </Router>
     );
