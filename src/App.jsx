@@ -5,6 +5,7 @@ import MainPage from "./pages/MainPage";
 import AlbumPage from "./pages/AlbumPage";
 import MediaPage from "./pages/MediaPage";
 import SettingsPage from "./pages/SettingsPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import "./App.css";
 
 const App = () => {
@@ -20,9 +21,10 @@ const App = () => {
 
                 <Routes>
                     <Route path="/" element={<MainPage setCurrentSongID={setCurrentSongID} />} />
-                    <Route path="/album/:id" element={<AlbumPage />} />
+                    <Route path="/album/:albumId" element={<AlbumPage setCurrentSongID={setCurrentSongID} />} />
                     <Route path="/media/:id" element={<MediaPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
                 </Routes>
 
                 {/* Fixed, full-width Audio Player */}

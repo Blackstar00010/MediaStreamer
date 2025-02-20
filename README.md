@@ -41,6 +41,7 @@ proj/
 ```
 
 ## Roadmap
+
 - Phase 1: Basic File Management & Scanning
   - Structure the whole project
   - Set the Target Directory
@@ -61,11 +62,15 @@ proj/
   - Rating (absolute or relative such as ELO)
 
 ## How to run
+
 For backend only, use
+
 ```shell
 uvicorn backend.api.main:app --reload
 ```
+
 To run frontend, use this while backend is running:
+
 ```shell
 npm run dev
 ```
