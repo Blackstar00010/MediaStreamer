@@ -13,25 +13,30 @@ DB_PATH = os.path.join(PROJECT_ROOT, "media.db")  # SQLite database file
 SUPPORTED_EXTS = [".mp3", ".wav", ".flac", ".m4a"]
 
 # Define metadata keys to extract
-METADATA_KEYS = [
-    "title",
-    "artist",
-    "album",
-    "genre",
-    "duration",
-    "tracknumber",
-    "date",
-    "organization",
-]
+# METADATA_KEYS = [
+#     "title",
+#     "artist",
+#     "album",
+#     "genre",
+#     "duration",
+#     "tracknumber",
+#     "date",
+#     "organization",
+# ]
+# file_path not included
 METADATA_KEY_TYPES = {
     "title": "TEXT",
     "artist": "TEXT",
+    "artist_id": "INTEGER",  # TODO: artist might be a list
     "album": "TEXT",
+    "album_id": "INTEGER",
     "genre": "TEXT",
+    "genre_id": "INTEGER",  # TODO: genre might be a list
     "duration": "REAL",
     "tracknumber": "INTEGER",
     "date": "TEXT",
     "organization": "TEXT",
+    "organization_id": "INTEGER",
 }
 
 if __name__ == "__main__":

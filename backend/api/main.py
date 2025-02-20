@@ -80,7 +80,8 @@ def stream_song(song_id: int, request: Request):
         print(range_header)
         # Parse the "Range" header (Example: "bytes=1000-")
         range_value = range_header.replace("bytes=", "").strip()
-        start, end = range_value.split("-") if "-" in range_value else (None, None)
+        start, end = range_value.split(
+            "-") if "-" in range_value else (None, None)
 
         # If not specified, start = 0 and end = full file
         start = int(start) if start else 0
@@ -128,4 +129,25 @@ def stream_song(song_id: int, request: Request):
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error streaming file: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error streaming file: {str(e)}")
+
+
+@app.get("/album/{album_id}")
+def get_album(album_id: str):
+    """Fetch all tracks in a specific album."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, album, title, artist FROM music WHERE album_id = ?", (album_id,))
+    tracks = cursor.fetchall()
+    conn.close()
+
+    if not tracks:
+        raise HTTPException(status_code=404, detail="Album not found")
+
+    return {
+        "album_id": album_id,
+        "album_name": tracks[1],
+        "tracks": [{"id": track[0], "title": track[2], "artist": track[3]} for track in tracks],
+    }
