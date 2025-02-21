@@ -9,10 +9,12 @@ const AudioPlayer = ({ songID }) => {
     const [volume, setVolume] = useState(1.0);
 
     useEffect(() => {
+        // Update the audio source when the songID changes, and play the song
         if (audioRef.current && songID) {
             audioRef.current.src = `http://127.0.0.1:8000/stream/${songID}`;
-            setIsPlaying(false);
             setProgress(0);
+            setIsPlaying(true);
+            audioRef.current.play();
         }
     }, [songID]);
 

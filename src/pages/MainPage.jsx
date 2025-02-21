@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 
 function MainPage({ setCurrentSongID }) {
     const [songs, setSongs] = useState([]);
-    const [inputId, setInputId] = useState(1648);
+    const [inputId, setInputId] = useState(1);
 
     useEffect(() => {
         fetch("http://127.0.0.1:8000/songs")
@@ -77,6 +77,10 @@ const styles = {
         gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
         gap: "15px",
         padding: "20px",
+        // enable scrolling
+        overflowY: 'auto',
+        // set the height of the container
+        height: '80vh',
     },
     card: {
         backgroundColor: "#222",

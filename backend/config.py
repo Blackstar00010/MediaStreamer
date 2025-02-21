@@ -12,19 +12,8 @@ DB_PATH = os.path.join(PROJECT_ROOT, "media.db")  # SQLite database file
 # Define supported audio file extensions
 SUPPORTED_EXTS = [".mp3", ".wav", ".flac", ".m4a"]
 
-# Define metadata keys to extract
-# METADATA_KEYS = [
-#     "title",
-#     "artist",
-#     "album",
-#     "genre",
-#     "duration",
-#     "tracknumber",
-#     "date",
-#     "organization",
-# ]
 # file_path not included
-METADATA_KEY_TYPES = {
+AUDIO_METADATA_KEY_TYPES = {
     "title": "TEXT",
     "artist": "TEXT",
     "artist_id": "INTEGER",  # TODO: artist might be a list
@@ -37,6 +26,7 @@ METADATA_KEY_TYPES = {
     "date": "TEXT",
     "organization": "TEXT",
     "organization_id": "INTEGER",
+    # "album_art": "TEXT",  # extracted each time a file is fetched
 }
 
 if __name__ == "__main__":
@@ -45,4 +35,4 @@ if __name__ == "__main__":
     print(f"Media directory: {MEDIA_DIR}")
     print(f"Database path: {DB_PATH}")
     print(f"Supported extensions: {SUPPORTED_EXTS}")
-    print(f"Metadata keys: {METADATA_KEYS}")
+    print(f"Metadata keys: {AUDIO_METADATA_KEY_TYPES.keys()}")

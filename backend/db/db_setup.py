@@ -1,6 +1,6 @@
 import sqlite3
 import logging
-from backend.config import DB_PATH, METADATA_KEY_TYPES
+from backend.config import DB_PATH, AUDIO_METADATA_KEY_TYPES
 
 
 def create_tables():
@@ -14,7 +14,7 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS music (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_path TEXT UNIQUE NOT NULL,
-            {", ".join([f"{key} {METADATA_KEY_TYPES[key]}" for key in METADATA_KEY_TYPES.keys()])}
+            {", ".join([f"{key} {AUDIO_METADATA_KEY_TYPES[key]}" for key in AUDIO_METADATA_KEY_TYPES.keys()])}
         )
         """
     )

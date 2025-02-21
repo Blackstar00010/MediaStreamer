@@ -1,11 +1,22 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse, Response
+from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 import os
 import mimetypes
 from backend.config import DB_PATH
+from backend.db.scan_media import extract_album_art
 
 app = FastAPI()
+
+# enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -139,15 +150,21 @@ def get_album(album_id: str):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, album, title, artist FROM music WHERE album_id = ?", (album_id,))
+        "SELECT id, album, title, artist, file_path FROM music WHERE album_id = ?", (album_id,))
     tracks = cursor.fetchall()
     conn.close()
 
     if not tracks:
         raise HTTPException(status_code=404, detail="Album not found")
-
-    return {
+    
+    album_art = None
+    if tracks:
+        album_art = extract_album_art(tracks[0][4])
+    ret = {
         "album_id": album_id,
-        "album_name": tracks[1],
+        "album_name": tracks[0][1],
+        "album_art": album_art,
         "tracks": [{"id": track[0], "title": track[2], "artist": track[3]} for track in tracks],
     }
+    # print(ret)
+    return ret
