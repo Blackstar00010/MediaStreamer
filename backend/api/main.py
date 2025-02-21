@@ -152,19 +152,17 @@ def get_album(album_id: str):
     cursor.execute(
         "SELECT id, album, title, artist, file_path FROM music WHERE album_id = ?", (album_id,))
     tracks = cursor.fetchall()
+    cursor.execute("SELECT album_art FROM album WHERE album_id = ?", (album_id,))
+    album_art = cursor.fetchone()
     conn.close()
 
     if not tracks:
         raise HTTPException(status_code=404, detail="Album not found")
     
-    album_art = None
-    if tracks:
-        album_art = extract_album_art(tracks[0][4])
     ret = {
         "album_id": album_id,
         "album_name": tracks[0][1],
         "album_art": album_art,
         "tracks": [{"id": track[0], "title": track[2], "artist": track[3]} for track in tracks],
     }
-    # print(ret)
     return ret

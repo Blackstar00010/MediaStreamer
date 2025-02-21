@@ -29,6 +29,13 @@ AUDIO_METADATA_KEY_TYPES = {
     # "album_art": "TEXT",  # extracted each time a file is fetched
 }
 
+ALBUM_METADATA_KEY_TYPES = {
+    "album_name": "TEXT",
+    "album_path": "TEXT",
+    "album_art": "TEXT",
+    "album_art_path": "TEXT",
+}
+
 if __name__ == "__main__":
     print("You are running config.py directly.")
     print(f"Project root: {PROJECT_ROOT}")
