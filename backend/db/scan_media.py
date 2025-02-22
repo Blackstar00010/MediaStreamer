@@ -2,28 +2,103 @@ import os
 import sqlite3
 import logging
 import base64
-from mutagen.id3 import ID3
 from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.wavpack import WavPack
 from mutagen.mp4 import MP4
-from backend.config import MEDIA_DIR, DB_PATH, AUDIO_METADATA_KEY_TYPES, ALBUM_METADATA_KEY_TYPES, SUPPORTED_EXTS
+import sys
+print(sys.path)
+from backend.config import MEDIA_DIR, DB_PATH, SUPPORTED_EXTS, AUDIO_METADATA_KEY_TYPES, ID_KEYS, IDS_KEYS
+from backend.db import utils
 
 
-def replace_unknowns(cursor: sqlite3.Cursor, table: str, keys: str | list) -> None:
-    """Replace 'Unknown' values with NULL in the specified keys."""
-    if keys in ["all", "*"]:
-        # get all columns
-        cursor.execute(f"PRAGMA table_info({table})")
-        keys = [row[1] for row in cursor.fetchall()]
-    if isinstance(keys, str):
-        keys = [keys]
-    for key in keys:
+def ensure_default_entries(cursor):
+    cursor.execute("INSERT OR IGNORE INTO artists (artist_id, artist_name) VALUES (0, NULL)")
+    cursor.execute("INSERT OR IGNORE INTO albums (album_id, album_name) VALUES (0, NULL)")
+
+
+def check_columns(cursor: sqlite3.Cursor, table: str, columns_and_types: dict) -> list:
+    """Check if the columns exist in the table. If not, add them. Returns newly added columns."""
+    logging.info(f"Checking columns for {table}...")
+
+    # check if table exists
+    cursor.execute(f"SELECT * FROM {table} LIMIT 1")
+    if not cursor.description:
+        logging.error(f"Table {table} does not exist.")
+        return
+
+    # check if columns exist
+    cursor.execute(f"PRAGMA table_info({table})")
+    existing_columns = [row[1] for row in cursor.fetchall()]
+    ret = []
+    # for column in columns:
+    for column in columns_and_types.keys():
+        if column in existing_columns:
+            continue
         cursor.execute(
-            f"UPDATE {table} SET {key} = NULL WHERE {key} = 'Unknown'")
-        logging.info(f"Replaced 'Unknown' with NULL in {key} column of {table} table.")
-    return
+            f"ALTER TABLE {table} ADD COLUMN {column} {columns_and_types[column]}"
+        )
+        logging.info(f"Added column {column} to {table}.")
+        ret.append(column)
+
+    logging.info(f"Checked columns for {table}.")
+    return ret
+
+
+def extract_metadata(file_path: str) -> dict:
+    """Extract metadata from an audio file."""
+    try:
+        if file_path.lower().endswith(".mp3"):
+            audio = MP3(file_path, ID3=EasyID3)
+        elif file_path.lower().endswith(".flac"):
+            audio = FLAC(file_path)
+        elif file_path.lower().endswith(".wav"):
+            audio = WavPack(file_path)
+        elif file_path.lower().endswith(".m4a"):
+            audio = MP4(file_path)
+        else:
+            logging.error(
+                f"Unsupported file format for {file_path}. Extension must be one of: .mp3, .flac, .wav, .m4a"
+            )
+            return None
+    except FileNotFoundError as e:
+        logging.error(f"File not found: {file_path}")
+        return None
+    except Exception as e:
+        logging.error(f"Failed to read audio file {file_path}: {e}")
+        return None
+    if not audio:
+        logging.error(f"Failed to read audio file {file_path}.")
+        return None
+    try:
+        ret = {"duration": audio.info.length if audio.info else 0, "file_path": file_path}
+        for key in AUDIO_METADATA_KEY_TYPES.keys():
+            if key in ret.keys():
+                continue
+            ret[key.replace("_id", "")] = audio.get(key.replace("_id", ""), [None])[0]
+        for key in IDS_KEYS:
+            ret[key] = audio.get(key, [None])[0]
+        return ret
+    except Exception as e:
+        logging.error(f"Failed to read metadata for {file_path}: {e}")
+        return None
+
+
+def get_or_create_id(cursor, table_wo_s, value):
+    """Get ID from database, or insert new value if not found. Return ID and boolean indicating if new entry was created."""
+    if value is None:
+        cursor.execute(f"SELECT {table_wo_s}_id FROM {table_wo_s}s WHERE {table_wo_s}_name IS NULL")
+    else:
+        cursor.execute(f"SELECT {table_wo_s}_id FROM {table_wo_s}s WHERE {table_wo_s}_name = ?", (value,))
+    row = cursor.fetchone()
+
+    if row:  # already exists
+        return row[0], False
+
+    cursor.execute(f"INSERT INTO {table_wo_s}s ({table_wo_s}_name) VALUES (?)", (value,))
+    return cursor.lastrowid, True
 
 
 def find_separate_albumart(directory: str) -> str:
@@ -107,232 +182,166 @@ def extract_album_art(file_path: str) -> str:
         return None
 
 
-def extract_metadata(file_path: str) -> dict:
-    """Extract metadata from an audio file."""
-    try:
-        if file_path.lower().endswith(".mp3"):
-            audio = MP3(file_path, ID3=ID3)
-        elif file_path.lower().endswith(".flac"):
-            audio = FLAC(file_path)
-        elif file_path.lower().endswith(".wav"):
-            audio = WavPack(file_path)
-        elif file_path.lower().endswith(".m4a"):
-            audio = MP4(file_path)
+def get_or_create_ids(cursor, table_wo_s, values):
+    """Retrieve artist IDs from database, or insert new artists if not found."""
+    ids = []
+
+    # If artist is missing, return the default "Unknown Artist" (ID 0)
+    if not values or values == ["Unknown"]:
+        return [0]
+
+    for value in values:
+        cursor.execute(f"SELECT artist_id FROM {table_wo_s}s WHERE {table_wo_s}_name = ?", (value,))
+        row = cursor.fetchone()
+
+        if row:
+            artist_id = row[0]  # Artist already exists
         else:
-            logging.error(
-                f"Unsupported file format for {file_path}. Extension must be one of: .mp3, .flac, .wav, .m4a"
-            )
-            return None
-        ret = {
-            key: audio.get(key, ["Unknown"])[0]
-            for key in AUDIO_METADATA_KEY_TYPES.keys()
-            if key not in ["duration", "file_path"]
-            or key.endswith("_id")  # ids are assigned in another function
-        }
-        ret["duration"] = audio.info.length if audio.info else 0
-        ret["file_path"] = file_path
-        return ret
-    except Exception as e:
-        logging.error(f"Failed to read metadata for {file_path}: {e}")
-        return None
+            cursor.execute(f"INSERT INTO {table_wo_s}s ({table_wo_s}_name) VALUES (?)", (value,))
+            artist_id = cursor.lastrowid  # Get newly inserted artist ID
+
+        ids.append(artist_id)
+
+    return ids
 
 
-def scan_basics(cursor: sqlite3.Cursor) -> None:
-    """Scan media folder and store metadata except ids in the cursor. conn.commit() should be called after this function to save changes."""
-    logging.info("Scanning basic information...")
-    keys_with_path = ["file_path"] + list(AUDIO_METADATA_KEY_TYPES.keys())
+def scan_basics(cursor: sqlite3.Cursor):
+    """Scan media folder and store metadata in SQLite."""
+    
+    # keys for music table
+    keys_musics = list(AUDIO_METADATA_KEY_TYPES.keys()) + ["file_path"]
 
+    # Scan files
     for root, _, files in os.walk(MEDIA_DIR):
-        for file in files:
-            if not any(file.lower().endswith(ext) for ext in SUPPORTED_EXTS):
-                continue
-
+        files = [file for file in files 
+                 if not file.startswith(".") 
+                 and any(file.lower().endswith(ext) for ext in SUPPORTED_EXTS)]
+        files.sort()
+        for i, file in enumerate(files):
             file_path = os.path.join(root, file)
-            logging.info(f"\tScanning {file_path}...")
+            logging.info(f"Scanning {file_path}...")
+            
             metadata = extract_metadata(file_path)
             if not metadata:
-                logging.error(f"Metadata not found for {file_path}.")
                 continue
+            
+            # Fill in missing metadata
+            metadata['title'] = metadata.get('title', None) or os.path.splitext(file)[0]
+            metadata['album'] = metadata.get('album', None) or os.path.basename(root)
+            metadata['tracknumber'] = metadata.get('tracknumber', None) or i + 1
+            metadata['totaltracks'] = metadata.get('totaltracks', None) or len(files)
+            metadata['discnumber'] = metadata.get('discnumber', None) or 1
+            metadata['totaldiscs'] = metadata.get('totaldiscs', None) or 1
+            metadata['albumartist'] = metadata.get('albumartist', None) or metadata.get('artist', None)
+            
+            for key in ID_KEYS:
+                if metadata.get(key, None) is None:
+                    print('asdf')  # debug
+                result = get_or_create_id(cursor, key, metadata.get(key, None))
+                metadata[f"{key}_id"] = result[0]
+                if not result[1] or key != "album":
+                    continue
+                album_art = extract_album_art(file_path)
+                if not album_art:
+                    continue
+                cursor.execute(
+                    f"""
+                    UPDATE albums
+                    SET album_art = ?
+                    WHERE album_id = ?
+                    """,
+                    (album_art, metadata["album_id"]),
+                )
+                    
+            ids_stuff = {}
+            for key in IDS_KEYS:
+                values_to_seek = metadata.get(key, None)
+                values_to_seek = values_to_seek.split(", ") if values_to_seek else []
+                ids_stuff[key] = get_or_create_ids(cursor, key, values_to_seek)
+            # e.g.) ids_stuff = {"artist": [1, 2, 3], ...}
 
+            # Insert song into music table
+            # TODO: only fill the empty fields in case we might use user input
             cmd = f"""
-                INSERT OR IGNORE INTO music ({", ".join(keys_with_path)})
-                VALUES ({", ".join(["?"] * len(keys_with_path))})
+                INSERT OR REPLACE INTO music ({", ".join(keys_musics)})
+                VALUES ({", ".join(["?"] * len(keys_musics))})
             """
             cursor.execute(
-                cmd, tuple([metadata[key] for key in keys_with_path])
+                cmd,
+                [metadata.get(key, None) for key in keys_musics],
             )
-            logging.info(f"\tInserted {file_path} into the database.")
-    logging.info("Scanned basic information.")
+            music_id = cursor.lastrowid
+
+            for key in IDS_KEYS:
+                for id_ in ids_stuff[key]:
+                    cursor.execute(
+                        f"INSERT OR REPLACE INTO {key}s_music ({key}_id, music_id) VALUES (?, ?)",
+                        (id_, music_id),
+                    )
+            # TODO: insert into artists_albums using maximum overlap of artist_ids for each album_id
+            
+    logging.info("Scanning and storing completed.")
 
 
-def find_duplicates(target_list: list) -> list:
-    """Find duplicates in a list."""
-    seen = set()
-    duplicates = set()
-    for item in target_list:
-        if item in seen:
-            duplicates.add(item)
-        else:
-            seen.add(item)
-    return list(duplicates)
+def get_artist_id_maps(cursor: sqlite3.Cursor, music_ids: list) -> dict:
+    """Get artist IDs associated with a list of music IDs."""
+    cursor.execute(
+        f"""
+        SELECT artist_id, music_id
+        FROM artists_music
+        WHERE music_id IN ({",".join(["?"] * len(music_ids))})
+        """,
+        music_ids,
+    )
+    artist_data = cursor.fetchall()
+    artist_id_map = {music_id: [] for music_id in music_ids}
+    for artist_id, music_id in artist_data:
+        artist_id_map[music_id].append(artist_id)
+    return artist_id_map
 
 
-def find_common_substring(strings: list) -> str:
-    """Find the common substring of a list of strings, starting from the first character."""
-    if not strings:
-        return None
-    if len(strings) == 1:
-        return strings[0]
-    common = []
-    for i in range(min(map(len, strings))):
-        if len(set(string[i] for string in strings)) == 1:
-            common.append(strings[0][i])
-        else:
-            break
-    return "".join(common)
-
-
-def set_ids(cursor: sqlite3.Cursor, table: str, key_types: dict) -> None:
-    """Scan media folder and store metadata ids in the cursor. conn.commit() should be called after this function to save changes."""
-    logging.info("Scanning ids...")
-    id_maps = {key.replace("_id", ""): {"NULL": 0} for key in key_types.keys() if key.endswith("_id")}
-
-    # replace "Unknown" with NULL
-    replace_unknowns(cursor, table, list(id_maps.keys()))
-    replace_unknowns(cursor, table, [key + "_id" for key in id_maps.keys()])
-
-    for key in id_maps.keys():
-        # find distinct key-(key+"_id") pairs by:
+def link_albumartists(cursor: sqlite3.Cursor):
+    """Link artists to albums. Use album artists if available, else use artists associated with tracks."""
+    cursor.execute("SELECT DISTINCT album_id FROM albums")
+    album_ids = [row[0] for row in cursor.fetchall() if row[0] != 0]
+    
+    for album_id in album_ids:
         cursor.execute(
-            f"SELECT DISTINCT {key}, {key}_id FROM {table} WHERE {key} IS NOT NULL OR {key}_id IS NOT NULL")
-
-        # first, check if key-(key+"_id") pairs are one-to-one
-        all_rows = cursor.fetchall()
-        all_rows_except_none = [row for row in all_rows if None not in row]
-        all_are_none = len(all_rows_except_none) == 0
-        if not all_are_none:
-            keys, key_ids = zip(*all_rows_except_none)
-        is_one_to_one = True
-        if (not all_are_none) and (len(keys) != len(set(keys))):
-            logging.error(
-                f"Multiple {key}_id values found for the same {key}: {find_duplicates(keys)}"
-            )
-            is_one_to_one = False
-        if (not all_are_none) and (len(key_ids) != len(set(key_ids))):
-            logging.error(
-                f"Multiple {key} values found for the same {key}_id: {find_duplicates(key_ids)}"
-            )
-            is_one_to_one = False
-
-        if not is_one_to_one:
-            response = "a"
-            while response.lower() not in ["y", "n"]:
-                response = input("\tDo you wish to reset the ids? (Y/n): ")
-            if response.lower() == "n":
-                logging.info(f"Skipping {key} ids.")
-                continue
-            all_rows = []
-            cursor.execute(f"UPDATE {table} SET {key}_id = NULL")
-            logging.info(f"Reset {key} ids.")
-
-        # then update the id_maps
-        for row in all_rows:
-            key_val, key_id_val = row
-            if key_id_val is None:
-                continue
-            elif key_val not in id_maps[key]:
-                id_maps[key][key_val] = key_id_val
-                logging.info(
-                    f"Found {key} id {key_id_val} for {key} {key_val}")
-            else:
-                cursor.execute(
-                    f"UPDATE {table} SET {key}_id = ? WHERE {key} = ?", (id_maps[key][key_val], key_val))
-                logging.info(
-                    f"Updated {key} id {id_maps[key][key_val]} for {key} {key_val}")
-
-        # then fill the missing ids in the table and update the id_maps
-        cursor.execute(
-            f"SELECT id, {key} FROM {table} WHERE {key}_id IS NULL OR {key}_id = 'Unknown'")
-        for row in cursor.fetchall():
-            key_val, key_id_val = row
-            if key_id_val not in id_maps[key]:
-                # id_maps[key][key_id_val] = len(id_maps[key]) + 1
-                id_maps[key][key_id_val] = max(
-                    id_maps[key].values(), default=0) + 1
-                logging.info(
-                    f"Assigned {key} id {id_maps[key][key_id_val]} to {key} {key_id_val}")
-            cursor.execute(f"UPDATE {table} SET {key}_id = ? WHERE id = ?",
-                           (id_maps[key][key_id_val], key_val))
-
-    logging.info("Scanned ids.")
-
-
-def scan_albums(cursor: sqlite3.Cursor) -> None:
-    """Scan media folder and store album metadata except ids in the cursor. conn.commit() should be called after this function to save changes."""
-    logging.info("Scanning albums...")
-    keys_with_id = ['album_id'] + list(ALBUM_METADATA_KEY_TYPES.keys())
-    # keys_with_id = ['album_id', 'album_name', 'album_path', 'album_art', 'album_art_path']
-
-    # get all distinct albums
-    cursor.execute("SELECT DISTINCT album FROM music WHERE album IS NOT NULL")
-    album_names = [row[0] for row in cursor.fetchall()]
-    for album_name in album_names:
-        # get all songs in the album
-        logging.info(f"Scanning {album_name}...")
-        cursor.execute("SELECT file_path, album_id FROM music WHERE album = ?", (album_name,))
-        rows = cursor.fetchall()
-        all_file_paths = [row[0] for row in rows]
-        album_id = [row[1] for row in rows]
-        if len(set(album_id)) > 1:
-            logging.error(
-                f"Multiple album ids found for the same album {album_name}: {find_duplicates(album_id)}"
-            )
-            continue
-        album_id = album_id[0] if album_name != "Unknown" else None
-        album_path = find_common_substring(all_file_paths)
-        album_art = [extract_album_art(file_path) for file_path in all_file_paths]
-        if len(set(album_art)) > 1:
-            logging.error(
-                f"Multiple album art found for the same album {album_name}: {find_duplicates(album_art)}. Using the first one..."
-            )
-        album_art = album_art[0] if album_art[0] else None
-        album_art_path = None  # none for now
-        
-        cmd = f"""
-            INSERT OR IGNORE INTO album ({", ".join(keys_with_id)})
-            VALUES ({", ".join(["?"] * (len(keys_with_id)))})
-        """
-        cursor.execute(
-            cmd, (album_id, album_name, album_path, album_art, album_art_path)
+            "SELECT music_id, albumartist FROM music WHERE album_id = ?",
+            (album_id,),
         )
-        logging.info(f"Inserted {album_name} into the albums database.")
-        
-        
-
-    
-    
-def check_columns(cursor: sqlite3.Cursor, table: str, columns: list):
-    """Check if the columns exist in the table. If not, add them."""
-    logging.info(f"Checking columns for {table}...")
-
-    # check if table exists
-    cursor.execute(f"SELECT * FROM {table} LIMIT 1")
-    if not cursor.description:
-        logging.error(f"Table {table} does not exist.")
-        return
-
-    # check if columns exist
-    cursor.execute(f"PRAGMA table_info({table})")
-    existing_columns = [row[1] for row in cursor.fetchall()]
-    for column in columns:
-        if column in existing_columns:
+        all_rows = cursor.fetchall()
+        if not all_rows:
             continue
-        cursor.execute(
-            f"ALTER TABLE {table} ADD COLUMN {column} {AUDIO_METADATA_KEY_TYPES[column]}")
-        logging.info(f"Added column {column} to {table}.")
-
-    logging.info(f"Checked columns for {table}.")
-    return
+        music_ids = [row[0] for row in all_rows]
+        album_artists = [row[1].split(', ') for row in all_rows if row[1]]  # in case only certain tracks have album artists
+        largest_subset = utils.find_largest_subset(album_artists)
+        if largest_subset:  # if largest subset is not empty
+            album_artist = ", ".join(largest_subset)
+            # if all(item in largest_subset for item in album_artists[0]):
+            #     # if the first row is the largest subset. we are doing this to conserve the order as much as possible
+            #     album_artist = album_artists[0]
+            # else:
+            #     album_artist = ", ".join(largest_subset)
+        else:  # if largest subset is not found, use artists associated with tracks
+            artist_ids = get_artist_id_maps(cursor, music_ids)
+            artist_ids = [artist_ids[music_id] for music_id in music_ids]  # list of list of ids
+            largest_subset = utils.find_largest_subset(artist_ids)
+            if largest_subset:
+                album_artist = ", ".join(
+                    [cursor.execute("SELECT artist_name FROM artists WHERE artist_id = ?", (artist_id,)).fetchone()[0] for artist_id in largest_subset]
+                )
+            else:
+                album_artist = "Various Artists"
+        album_artist_ids = get_or_create_ids(cursor, "artist", album_artist.split(", "))
+        for artist_id in album_artist_ids:
+            cursor.execute(
+                "INSERT OR REPLACE INTO artists_albums (artist_id, album_id) VALUES (?, ?)",
+                (artist_id, album_id),
+            )
+    logging.info("Linking artists to albums completed.")
+        
+    
 
 
 def main():
@@ -349,12 +358,14 @@ def main():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    check_columns(cursor, "music", AUDIO_METADATA_KEY_TYPES.keys())
-    scan_basics(cursor)
-    set_ids(cursor, "music", AUDIO_METADATA_KEY_TYPES)
+    # Ensure default entries of NULL for artist and album where we cannot fetch them
+    ensure_default_entries(cursor)
+    cols_to_check = AUDIO_METADATA_KEY_TYPES.copy()
+    cols_to_check["file_path"] = "TEXT"
+    check_columns(cursor, "music", cols_to_check)
     
-    check_columns(cursor, 'album', ALBUM_METADATA_KEY_TYPES.keys())
-    scan_albums(cursor)
+    scan_basics(cursor)
+    link_albumartists(cursor)
     
     conn.commit()
     conn.close()
@@ -363,3 +374,4 @@ def main():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     main()
+    

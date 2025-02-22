@@ -5,7 +5,7 @@ import sqlite3
 import os
 import mimetypes
 from backend.config import DB_PATH
-from backend.db.scan_media import extract_album_art
+from backend.db.scan_media import get_artist_id_maps
 
 app = FastAPI()
 
@@ -29,12 +29,13 @@ def get_songs():
     """Fetch all songs from the database."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title, artist, album FROM music")
+    cursor.execute("SELECT music_id, title FROM music")
     songs = cursor.fetchall()
     conn.close()
 
     return [
-        {"id": song[0], "title": song[1], "artist": song[2], "album": song[3]}
+        # {"id": song[0], "title": song[1], "artist": song[2], "album": song[3]}
+        {"id": song[0], "title": song[1], 'artist': None, 'album': None}
         for song in songs
     ]
 
@@ -64,7 +65,7 @@ def get_song_path(song_id: int) -> str:
     """Fetch the file path of a song by ID from the database."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT file_path FROM music WHERE id = ?", (song_id,))
+    cursor.execute("SELECT file_path FROM music WHERE music_id = ?", (song_id,))
     row = cursor.fetchone()
     conn.close()
 
@@ -145,24 +146,67 @@ def stream_song(song_id: int, request: Request):
 
 
 @app.get("/album/{album_id}")
-def get_album(album_id: str):
-    """Fetch all tracks in a specific album."""
+def get_album(album_id: int):
+    """Fetch all tracks in a specific album, including artists."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id, album, title, artist, file_path FROM music WHERE album_id = ?", (album_id,))
-    tracks = cursor.fetchall()
-    cursor.execute("SELECT album_art FROM album WHERE album_id = ?", (album_id,))
-    album_art = cursor.fetchone()
-    conn.close()
 
-    if not tracks:
+    # Fetch album name and album art
+    cursor.execute("SELECT album_name FROM albums WHERE album_id = ?", (album_id,))
+    album_row = cursor.fetchone()
+    if not album_row:
         raise HTTPException(status_code=404, detail="Album not found")
+    
+    album_name = album_row[0]
+
+    # Fetch album art (if available)
+    cursor.execute("SELECT album_art FROM albums WHERE album_id = ?", (album_id,))
+    album_art_row = cursor.fetchone()
+    album_art = album_art_row[0] if album_art_row else None
+
+    # Fetch tracks in the album (including music IDs)
+    cursor.execute("SELECT music_id, tracknumber, title, file_path FROM music WHERE album_id = ?", (album_id,))
+    tracks = cursor.fetchall()
+
+    # Fetch artist IDs associated with these tracks
+    music_ids = [track[0] for track in tracks]
+    track_artist_map = get_artist_id_maps(cursor, music_ids)
+    artists = {}
+    for music_id, artist_ids in track_artist_map.items():
+        cursor.execute(f"SELECT artist_name FROM artists WHERE artist_id IN ({','.join('?' * len(artist_ids))})", artist_ids)
+        artist_names = [row[0] for row in cursor.fetchall()]
+        artists[music_id] = ', '.join(artist_names) if artist_names else None
+
+    
+    # Fetch album artists
+    cursor.execute("SELECT artist_id from artists_albums WHERE album_id = ?", (album_id,))
+    artist_ids = [row[0] for row in cursor.fetchall()]
+    cursor.execute(f"SELECT artist_name FROM artists WHERE artist_id IN ({','.join('?' * len(artist_ids))})", artist_ids)
+    album_artists = [row[0] for row in cursor.fetchall()]
+    album_artists.sort()
+    print('asdf', album_artists)
+    album_artists = ', '.join(album_artists)
+
+    conn.close()
+    
+    # Process the response
     
     ret = {
         "album_id": album_id,
-        "album_name": tracks[0][1],
+        "album_name": album_name,
         "album_art": album_art,
-        "tracks": [{"id": track[0], "title": track[2], "artist": track[3]} for track in tracks],
+        "album_artists": album_artists,
+        "tracks": [
+            {
+                "id": track[0],
+                "track_number": track[1],
+                "title": track[2],
+                # "artist_names": ", ".join(track_artist_map.get(track[0], [])) if track_artist_map.get(track[0], []) else None,
+                "artist": artists.get(track[0], None),
+            }
+            for track in tracks
+        ]
     }
+
+    # print(ret)
     return ret

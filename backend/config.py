@@ -12,28 +12,37 @@ DB_PATH = os.path.join(PROJECT_ROOT, "media.db")  # SQLite database file
 # Define supported audio file extensions
 SUPPORTED_EXTS = [".mp3", ".wav", ".flac", ".m4a"]
 
-# file_path not included
+# id and file_path not included
 AUDIO_METADATA_KEY_TYPES = {
     "title": "TEXT",
-    "artist": "TEXT",
-    "artist_id": "INTEGER",  # TODO: artist might be a list
-    "album": "TEXT",
+    # "artist": "TEXT",
+    # "album": "TEXT",
     "album_id": "INTEGER",
-    "genre": "TEXT",
-    "genre_id": "INTEGER",  # TODO: genre might be a list
+    # "genre": "TEXT",
+    "genre_id": "INTEGER",
     "duration": "REAL",
     "tracknumber": "INTEGER",
     "date": "TEXT",
-    "organization": "TEXT",
+    # "organization": "TEXT",
     "organization_id": "INTEGER",
-    # "album_art": "TEXT",  # extracted each time a file is fetched
+    "tracknumber": "INTEGER",
+    "totaltracks": "INTEGER",
+    "discnumber": "INTEGER",
+    "totaldiscs": "INTEGER",
+    "albumartist": "TEXT",
+    "composer": "TEXT",
 }
+
+# keys that require special handling
+# (e.g. splitting by comma for multiple values)
+ID_KEYS = ["album", "genre", "organization"]
+IDS_KEYS = ["artist"]
 
 ALBUM_METADATA_KEY_TYPES = {
     "album_name": "TEXT",
     "album_path": "TEXT",
     "album_art": "TEXT",
-    "album_art_path": "TEXT",
+    # "album_art_path": "TEXT",
 }
 
 if __name__ == "__main__":
