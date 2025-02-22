@@ -10,7 +10,11 @@ import "./App.css";
 
 const App = () => {
     const [currentSongID, setCurrentSongID] = useState(1);
+
+    // queues are arrays of song IDs
     const [queue, setQueue] = useState([]);
+    const [backQueue, setBackQueue] = useState([]);  // store the previous songs, in reverse order. i.e. the last song played is the first in the backQueue
+
     return (
         <Router>
             <div className="App">
@@ -22,23 +26,22 @@ const App = () => {
 
                 <Routes>
                     <Route path="/" element={<MainPage setCurrentSongID={setCurrentSongID} />} />
-                    <Route path="/album/:albumID" element={<AlbumPage setCurrentSongID={setCurrentSongID} setQueue={setQueue} />} />
+                    <Route path="/album/:albumID" element={<AlbumPage setCurrentSongID={setCurrentSongID} queue={queue} setQueue={setQueue} backQueue={backQueue} setBackQueue={setBackQueue} />} />
                     <Route path="/media/:id" element={<MediaPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
 
-                {/* Fixed, full-width Audio Player */}
                 {
                     currentSongID &&
-                    <div className="player">
-                        <AudioPlayer
-                            songID={currentSongID}
-                            setCurrentSongID={setCurrentSongID}
-                            queue={queue}
-                            setQueue={setQueue}
-                        />
-                    </div>
+                    <AudioPlayer
+                        songID={currentSongID}
+                        setCurrentSongID={setCurrentSongID}
+                        queue={queue}
+                        setQueue={setQueue}
+                        backQueue={backQueue}
+                        setBackQueue={setBackQueue}
+                    />
                 }
             </div>
         </Router>
