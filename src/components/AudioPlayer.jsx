@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
 
-const AudioPlayer = ({ songID }) => {
+const AudioPlayer = ({ songID, setCurrentSongID, queue, setQueue }) => {
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -25,10 +25,22 @@ const AudioPlayer = ({ songID }) => {
         const updateProgress = () => {
             setProgress((audio.currentTime / audio.duration) * 100 || 0);
         };
+        const handleSongEnd = () => { // Play the next song in the queue
+            if (queue.length > 0) {
+                const nextTrack = queue[0];
+                setCurrentSongID(nextTrack.id);
+                setQueue(queue.slice(1));
+            }
+            console.log('queue: ', queue);
+        };
 
         audio.addEventListener("timeupdate", updateProgress);
-        return () => audio.removeEventListener("timeupdate", updateProgress);
-    }, []);
+        audio.addEventListener("ended", handleSongEnd);
+        return () => {
+            audio.removeEventListener("timeupdate", updateProgress);
+            audio.removeEventListener("ended", handleSongEnd);
+        }
+    }, [queue, setQueue, setCurrentSongID]);
 
     const togglePlay = () => {
         if (isPlaying) {

@@ -10,6 +10,7 @@ import "./App.css";
 
 const App = () => {
     const [currentSongID, setCurrentSongID] = useState(1);
+    const [queue, setQueue] = useState([]);
     return (
         <Router>
             <div className="App">
@@ -21,7 +22,7 @@ const App = () => {
 
                 <Routes>
                     <Route path="/" element={<MainPage setCurrentSongID={setCurrentSongID} />} />
-                    <Route path="/album/:albumID" element={<AlbumPage setCurrentSongID={setCurrentSongID} />} />
+                    <Route path="/album/:albumID" element={<AlbumPage setCurrentSongID={setCurrentSongID} setQueue={setQueue} />} />
                     <Route path="/media/:id" element={<MediaPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<NotFoundPage />} />
@@ -31,7 +32,12 @@ const App = () => {
                 {
                     currentSongID &&
                     <div className="player">
-                        <AudioPlayer songID={currentSongID} />
+                        <AudioPlayer
+                            songID={currentSongID}
+                            setCurrentSongID={setCurrentSongID}
+                            queue={queue}
+                            setQueue={setQueue}
+                        />
                     </div>
                 }
             </div>

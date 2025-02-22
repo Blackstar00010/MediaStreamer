@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-const AlbumPage = ({ setCurrentSongID }) => {
-    const { albumID } = useParams();
+const AlbumPage = ({ setCurrentSongID, setQueue }) => {
+    const { albumID } = useParams();  // retrieve the albumID from the URL. e.g. .../album/1 -> albumID = 1
     const [albumName, setAlbumName] = useState("");
     const [artistName, setArtistName] = useState("");
     const [albumArt, setAlbumArt] = useState("");
@@ -14,7 +14,7 @@ const AlbumPage = ({ setCurrentSongID }) => {
             .then((res) => {
                 // only route if the response is 404
                 if (res.status === 404) {
-                    // navigate("/404");
+                    navigate("/404");
                     return null;
                 } else if (!res.ok) {
                     throw new Error('Network response was not ok');
@@ -30,10 +30,10 @@ const AlbumPage = ({ setCurrentSongID }) => {
                     setTracks(data.tracks);
                 }
             })
-        // .catch(() => navigate("/404"));
+            .catch(() => navigate("/404"));
     }, [albumID, navigate]);
 
-    console.log(tracks);
+    // console.log(tracks);
 
     // sort by track number
     tracks.sort((a, b) => a.track_number - b.track_number);
@@ -55,7 +55,15 @@ const AlbumPage = ({ setCurrentSongID }) => {
                 <ul style={styles.tracklist}>
                     {tracks.map((track) => (
                         <li key={track.track_number} style={styles.trackItem}>
-                            <button onClick={() => setCurrentSongID(track.id)} style={styles.trackButton}>
+                            <button onClick={
+                                () => {
+                                    setCurrentSongID(track.id);
+                                    for (let i = 0; i < tracks.length; i++) {
+                                        if (tracks[i].id > track.id) {
+                                            setQueue(tracks.slice(i));
+                                        }
+                                    }
+                                }} style={styles.trackButton}>
                                 <div style={{ marginRight: "10px", display: "inline-block", width: "30px" }}>
                                     {track.track_number}
                                 </div>
@@ -79,9 +87,9 @@ const AlbumPage = ({ setCurrentSongID }) => {
 // Styles
 const styles = {
     container: {
-        textAlign: "center",
+        textAlign: "left",
         padding: "20px",
-        maxWidth: "80%",
+        width: "80%",
         margin: 'auto',
     },
     albumContents: {
