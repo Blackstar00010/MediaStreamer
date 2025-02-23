@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 // import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
 import { faBackward, faPlay, faPause, faForward } from "@fortawesome/free-solid-svg-icons";
-import { width } from "@fortawesome/free-solid-svg-icons/fa0";
 
 const AudioPlayer = ({ songID, setCurrentSongID, queue, setQueue, backQueue, setBackQueue }) => {
     const audioRef = useRef(null);
@@ -11,25 +10,15 @@ const AudioPlayer = ({ songID, setCurrentSongID, queue, setQueue, backQueue, set
     const [volume, setVolume] = useState(1.0);
 
     const playNext = () => {
-        setQueue(prevQueue => {
-            console.log('prevQueue: ', prevQueue);
-            if (prevQueue.length === 0) return []; // No songs left
+        // queue empty
+        if (queue.length === 0) return;
 
-            const nextTrack = prevQueue[0]; // Get first track in queue
-            setBackQueue(prevBackQueue => [songID, ...prevBackQueue]); // Move current song to backQueue
-            setCurrentSongID(nextTrack); // Set new song
-
-            return prevQueue.slice(1); // Remove first song from queue
-        });
+        // move (first queued -> current), (current -> first backQ)
+        const nextTrack = queue[0];
+        setCurrentSongID(nextTrack);
+        setQueue(queue.slice(1));
+        setBackQueue([songID, ...backQueue]);
     };
-    // const playNext = () => {
-    //     if (queue.length > 0) {
-    //         const nextTrackID = queue[0];
-    //         setCurrentSongID(nextTrackID);
-    //         setQueue(queue.slice(1));
-    //         setBackQueue([songID, ...backQueue]);
-    //     }
-    // };
     const playPrev = () => {
         // if progress less than 10 seconds, start over
         if (audioRef.current && audioRef.current.currentTime > 10) {
@@ -66,16 +55,11 @@ const AudioPlayer = ({ songID, setCurrentSongID, queue, setQueue, backQueue, set
         const handleSongEnd = () => {
             // Play the next song in the queue
             if (queue.length > 0) {
-                const nextTrack = queue[0];
-                if (nextTrack) {
-                    setCurrentSongID(nextTrack.id);
-                    setQueue(queue.slice(1));
-                }
+                playNext();
             } else {
                 setIsPlaying(false);
             }
             setBackQueue([songID, ...backQueue]);
-            console.log('queue: ', queue);
         };
 
         audio.addEventListener("timeupdate", updateProgress);
@@ -145,7 +129,6 @@ const AudioPlayer = ({ songID, setCurrentSongID, queue, setQueue, backQueue, set
     );
 };
 
-// Inline styles for simplicity (can use CSS or Tailwind later)
 const styles = {
     playerContainer: {
         position: "fixed",

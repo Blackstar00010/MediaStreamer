@@ -1,0 +1,33 @@
+#album-contents.vertical {
+    overflow-y: scroll;
+    /* Allow album to grow */
+}
+
+#album-contents.horizontal {
+    overflow-y: hidden;
+    /* Hide overflowing content */
+}
+
+#album-art.vertical {
+    width: 300px;
+}
+
+#tracklist-container.vertical {
+    /* width: 100%; */
+    /* Make tracklist take full width */
+    height: fit-content;
+    /* Allow tracklist to grow */
+    overflow-y: visible;
+    /* Allow tracklist to grow */
+    margin: auto;
+    margin-bottom: 40px;
+}
+
+
+#tracklist-container.horizontal {
+    height: 80vh;
+    /* Limit height to 80% of the viewport */
+    overflow-y: auto;
+    /* Enable scrolling for tracklist (side-by-side) */
+    margin: 10px 30px;
+}
