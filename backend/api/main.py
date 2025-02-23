@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import StreamingResponse, Response
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 import os
 import mimetypes
+import random
 from backend.config import DB_PATH
 from backend.db.scan_media import get_artist_id_maps
 
@@ -18,11 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Music Streaming API!"}
-
 
 @app.get("/songs")
 def get_songs():
@@ -177,20 +176,17 @@ def get_album(album_id: int):
         artist_names = [row[0] for row in cursor.fetchall()]
         artists[music_id] = ', '.join(artist_names) if artist_names else None
 
-    
     # Fetch album artists
     cursor.execute("SELECT artist_id from artists_albums WHERE album_id = ?", (album_id,))
     artist_ids = [row[0] for row in cursor.fetchall()]
     cursor.execute(f"SELECT artist_name FROM artists WHERE artist_id IN ({','.join('?' * len(artist_ids))})", artist_ids)
     album_artists = [row[0] for row in cursor.fetchall()]
     album_artists.sort()
-    print('asdf', album_artists)
     album_artists = ', '.join(album_artists)
 
     conn.close()
     
     # Process the response
-    
     ret = {
         "album_id": album_id,
         "album_name": album_name,
@@ -201,7 +197,6 @@ def get_album(album_id: int):
                 "id": track[0],
                 "track_number": track[1],
                 "title": track[2],
-                # "artist_names": ", ".join(track_artist_map.get(track[0], [])) if track_artist_map.get(track[0], []) else None,
                 "artist": artists.get(track[0], None),
             }
             for track in tracks
@@ -210,3 +205,20 @@ def get_album(album_id: int):
 
     # print(ret)
     return ret
+
+
+@app.get("/random_album")
+def get_random_album():
+    """Fetch a random album ID from the database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT album_id FROM albums WHERE album_name IS NOT NULL")
+    album_ids = [row[0] for row in cursor.fetchall()]
+    conn.close()
+
+    if not album_ids:
+        raise HTTPException(status_code=404, detail="No albums found")
+
+    random_album_id = random.choice(album_ids)
+    print(random_album_id)
+    return {"album_id": random_album_id}

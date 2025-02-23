@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
 import AudioPlayer from "./components/AudioPlayer";
+import Navbar from "./components/Navbar";
 import MainPage from "./pages/MainPage";
 import AlbumPage from "./pages/AlbumPage";
 // import MediaPage from "./pages/MediaPage";
@@ -14,16 +15,12 @@ const App = () => {
     // queues are arrays of song IDs
     const [queue, setQueue] = useState([]);
     const [backQueue, setBackQueue] = useState([]);  // store the previous songs, in reverse order. i.e. the last song played is the first in the backQueue
+    // const navigate = useNavigate();
 
     return (
         <Router>
             <div className="App">
-                <nav className="navbar">
-                    <Link to="/">Home</Link>
-                    {/* below are not implemented yet */}
-                    {/* <Link to="/settings">Settings</Link> */}
-                    {/* <Link to="/">Rate</Link> */}
-                </nav>
+                <Navbar />
 
                 <Routes>
                     <Route path="/" element={<MainPage setCurrentSongID={setCurrentSongID} />} />

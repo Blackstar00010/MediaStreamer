@@ -20,9 +20,7 @@ const AlbumPage = ({ setCurrentSongID, setQueue, setBackQueue }) => {
     useEffect(() => {
         const observer = new ResizeObserver(() => {
             if (albumContentsRef.current) {
-                console.log(albumContentsRef.current.scrollHeight, albumContentsRef.current.clientHeight);
                 const isWrapped = albumContentsRef.current.scrollHeight > albumContentsRef.current.clientHeight * 1.1;
-                // console.log(isWrapped);
                 setIsVertical(isWrapped);
             }
         });
