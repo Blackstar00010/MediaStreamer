@@ -1,41 +1,36 @@
 import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 function MainPage({ setCurrentSongID }) {
-    const [songs, setSongs] = useState([]);
-    const [inputId, setInputId] = useState(1);
+    const navigate = useNavigate();
+    const [albums, setAlbums] = useState([]);
 
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/songs")
+        fetch("http://127.0.0.1:8000/albums")
             .then((res) => res.json())
-            .then((data) => setSongs(data))
-            .catch((error) => console.error("Error fetching songs:", error));
+            .then((data) => setAlbums(data))
+            .catch((error) => console.error("Error fetching albums:", error));
     }, []);
-
-    const handlePlay = () => {
-        if (!inputId) return;
-        setCurrentSongID(inputId);
-    };
 
     return (
         <>
-            <h1>Music Library</h1>
-
-            {/* Input Field & Button */}
-            <div style={styles.inputContainer}>
-                <input
-                    type="number"
-                    placeholder="Enter song ID; default is 1648"
-                    value={inputId}
-                    onChange={(e) => setInputId(e.target.value)}
-                    style={styles.input} />
-                <button onClick={handlePlay} style={styles.button}>Enter</button>
-            </div>
-
-            {/* Song List */}
+            <h1>All Albums</h1>
             <div style={styles.gridContainer}>
-                {songs.map((song) => (
+                {albums.map((album) => (
+                    <Link to={`/album/${album.key}`} key={album.key}>
+                        <div style={styles.card}>
+                            <img
+                                src={album.art || "/album_placeholder.png"}
+                                alt={album.name || "Unclassified"}
+                                style={styles.albumArt} />
+                            <p>{album.name}</p>
+                            <p>{album.artist}</p>
+                        </div>
+                    </Link>
+                ))}
+
+                {/* {songs.map((song) => (
                     <div key={song.id} style={styles.card}>
-                        {/* TODO: add backend logic to send artworks */}
                         <img
                             src={song.album_art || null}
                             alt={song.title}
@@ -43,7 +38,7 @@ function MainPage({ setCurrentSongID }) {
                         <p>{song.title}</p>
                         <p>{song.artist}</p>
                     </div>
-                ))}
+                ))} */}
             </div>
         </>
     );

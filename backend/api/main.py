@@ -33,7 +33,6 @@ def get_songs():
     conn.close()
 
     return [
-        # {"id": song[0], "title": song[1], "artist": song[2], "album": song[3]}
         {"id": song[0], "title": song[1], 'artist': None, 'album': None}
         for song in songs
     ]
@@ -142,6 +141,21 @@ def stream_song(song_id: int, request: Request):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error streaming file: {str(e)}")
+
+
+@app.get("/albums")
+def get_albums():
+    """Fetch all albums from the database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT album_id, album_name, album_art FROM albums")
+    albums = cursor.fetchall()
+    conn.close()
+
+    return [
+        {"key": album[0], "name": album[1], "art": album[2], "artist": None}
+        for album in albums
+    ]
 
 
 @app.get("/album/{album_id}")

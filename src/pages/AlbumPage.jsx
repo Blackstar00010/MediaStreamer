@@ -80,7 +80,7 @@ const AlbumPage = ({ setCurrentSongID, setQueue, setBackQueue }) => {
                 {albumArt ? (
                     <img src={albumArt} alt="Album Cover" id="album-art" style={styles.albumArt} className={isVertical ? "vertical" : "horizontal"} />
                 ) : (
-                    <img src="/icon1415.png" alt="Default Album Cover" id="album-art" style={styles.albumArt} className={isVertical ? "vertical" : "horizontal"} />
+                    <img src="/album_placeholder.png" alt="Default Album Cover" id="album-art" style={styles.albumArt} className={isVertical ? "vertical" : "horizontal"} />
                 )}
                 <h1 style={{ marginLeft: "0" }}>{albumName}</h1>
                 <h2 style={{ marginLeft: "0" }}>{artistName}</h2>
