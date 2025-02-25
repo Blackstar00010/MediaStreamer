@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { fetchAlbum } from "../api/basic";
 import './AlbumPage.css';
 
 const AlbumPage = ({ setCurrentSongID, setQueue, setBackQueue }) => {
@@ -37,19 +38,8 @@ const AlbumPage = ({ setCurrentSongID, setQueue, setBackQueue }) => {
     }, []);
 
     useEffect(() => {
-        fetch(`http://127.0.0.1:8000/album/${albumID}`)
-            .then((res) => {
-                // only route if the response is 404
-                if (res.status === 404) {
-                    navigate("/404");
-                    return null;
-                } else if (!res.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return res.json();
-            })
+        fetchAlbum(albumID)
             .then((data) => {
-                // console.log(data);
                 if (data) {
                     setAlbumName(data.album_name);
                     setArtistName(data.album_artists);

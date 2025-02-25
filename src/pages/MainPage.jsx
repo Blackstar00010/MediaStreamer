@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { fetchAllAlbums } from "../api/basic";
 import "./MainPage.css";
 
 function MainPage() {
@@ -7,8 +8,7 @@ function MainPage() {
     const [albums, setAlbums] = useState([]);
 
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/albums")
-            .then((res) => res.json())
+        fetchAllAlbums()
             .then((data) => setAlbums(data))
             .catch((error) => console.error("Error fetching albums:", error));
     }, []);

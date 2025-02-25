@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fetchComparisonAlbums, updateEloRating } from "../api/basic";
 import "./ComparePage.css";
 
 const ComparePage = () => {
@@ -13,8 +14,8 @@ const ComparePage = () => {
     const fetchAlbums = async () => {
         setLoading(true);
         try {
-            const response = await fetch("http://127.0.0.1:8000/compare_albums");
-            const data = await response.json();
+            const data = await fetchComparisonAlbums();
+            console.log(data);
             setAlbums(data.albums);
         } catch (error) {
             console.error("Error fetching albums:", error);
@@ -24,17 +25,7 @@ const ComparePage = () => {
 
     const chooseAlbum = async (winnerId, loserId) => {
         try {
-            const response = await fetch("http://127.0.0.1:8000/update_rating", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ winner_id: winnerId, loser_id: loserId }), // Ensure correct JSON keys
-            });
-            // console.log(response);
-
-            if (!response.ok) {
-                throw new Error("Failed to update rating");
-            }
-
+            await updateEloRating(winnerId, loserId);
             // Load new albums after voting
             fetchAlbums();
         } catch (error) {
