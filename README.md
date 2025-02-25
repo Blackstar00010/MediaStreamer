@@ -1,15 +1,13 @@
 # MediaStreamer
 
-My media(audio for now) streaming service. Used to replace existing services such as Plex/Jellyfin/Emby, but more suited to my own needs.
+My media(audio for now) streaming service. Used to replace existing services on my homelab such as Plex/Jellyfin/Emby, but more suited to my own needs. For example, random album feature, album rating feature(similar to piku.co.kr), etc.
 
 ## Folder Structure
 
 ```plaintext
 proj/
 │── media.db                  # SQLite database file
-│── .env                      # Environment variables
 │── requirements.txt          # Python dependencies
-│── docker-compose.yml        # Docker setup (if using Docker)
 │── README.md                 # Project documentation
 |── .venv/                    # Virtual environment (Python)
 │── .git/                     # Git directory
@@ -18,58 +16,52 @@ proj/
 │   ├── backend/                  # Backend (mostly python ig)
 │   │   ├── config.py                 # Configurations
 │   │   ├── db/                       # Database-related scripts
-│   │   │   ├── schema.py                 # Database schema setup
+│   │   │   ├── db_setup.py               # Database setup script
 │   │   │   ├── scan_media.py             # Script to scan media folder
+│   │   │   ├── utils.py                  # Utility functions
 │   │   ├── api/                      # FastAPI
 │   │   │   ├── main.py                   # Main backend API entry point
-│   │   │   ├── routes.py                 # API routes
-│   │   │   ├── models.py                 # Database models (if using SQLAlchemy)
-│   │   │   ├── utils.py                  # Utility functions
-│   │   ├── services/                 # Business logic (metadata extraction, streaming)
-│   │   │   ├── metadata.py               # Extract metadata from audio files
-│   │   │   ├── streamer.py               # Handle audio streaming
-│   ├── frontend/                 # Frontend (React, probably)
-│   │   ├── public/                   # Static assets (favicons, index.html, etc.)
+│   ├── frontend/                 # Frontend (React)
+│   │   ├── public/                   # Static assets (favicons, default images, etc.)
 │   │   ├── src/                      # React source code
-│   │   │   ├── components/               # UI components (buttons, players, etc.)
-│   │   │   ├── pages/                    # Page components (Home, Library, etc.)
-│   │   │   ├── api/                      # API calls to backend
-│   │   │   ├── App.js                    # Main React component
-│   │   │   ├── index.js                  # React entry point
+│   │   │   ├── components/               # UI components (players, navbars, etc.)
+│   │   │   ├── pages/                    # Page components (home, album, album comparison, etc.)
+│   │   │   ├── App.jsx                   # Main React component
+│   │   │   ├── index.jsx                 # React entry point
 │   │   ├── package.json              # Frontend dependencies
-│   │   ├── vite.config.js            # Vite (or webpack) config
+│   │   ├── vite.config.js            # Vite config
 ```
 
-## Roadmap
+## Dones and To Dos
 
-- Phase 1: Basic File Management & Scanning
-  - Structure the whole project
-  - Set the Target Directory
-    - Make a folder named "media" to store all the media files.
-    - Optional: allow dynamic changes to this directory; configuration file or some UI.
-  - Scan the Directory for Music Files
-    - Store metadata (filename, path, artist, album, duration, etc.) in db (sqlite) using python mutagen
-    - Periodically scan for new, deleted, or modified files.
-- Phase 2: Backend
-  - Set Up a Web Server
-    - Implement REST APIs for listing, searching, and playing.
-  - Implement Audio Streaming
-    - Use HTTP range requests to allow seeking within songs.
-    - Stream audio using FFmpeg if transcoding is needed.
-- Phase 3: Frontend UI & Player
-- Phase 4: Extra Features
-  - Search feature
-  - Rating (absolute or relative such as ELO)
+- Dones
+  - Basic media player
+  - Main page that shows all albums
+  - Album page that shows all songs in an album + Random album page
+  - Album comparison page that shows all songs in two albums
+- TODOs
+  - Dockerise for easy deployment
+  - Settings page
+  - Loading screen
+  - Search & sort
+    - Search bar
+    - Sort by album name, artist name, etc.
+  - Playlists
+  - Allow users to edit metadata such as artists, etc.
+  - All musics page
+  - Video integration
+  - Image integration?
+  - Users
 
 ## How to run
 
-For backend only, use
+For backend,
 
 ```shell
 uvicorn backend.api.main:app --reload
 ```
 
-To run frontend, use this while backend is running:
+For frontend, while the backend is running,
 
 ```shell
 npm run dev
