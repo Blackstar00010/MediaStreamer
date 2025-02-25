@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./MainPage.css";
 
-function MainPage({ setCurrentSongID }) {
+function MainPage() {
     const navigate = useNavigate();
     const [albums, setAlbums] = useState([]);
 
@@ -45,7 +45,7 @@ const styles = {
         // enable scrolling
         height: '80vh',
         overflowY: 'auto',
-        alignItems: "stretch",  // asdfasdf
+        alignItems: "stretch",
     },
     card: {
         backgroundColor: "#222",
@@ -60,16 +60,12 @@ const styles = {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        transition: "transform 0.2s ease-in-out",
-        "&:hover": {
-            transform: "scale(1.05)",
-        },
     },
     albumArt: {
         width: "100%",
         height: "auto",
-        aspectRatio: "1 / 1", // Maintain square aspect ratio
-        objectFit: "cover", // Ensures images scale properly
+        aspectRatio: "1 / 1", // square aspect ratio
+        objectFit: "cover", // ensures images scale properly
         borderRadius: "5px",
     },
 };

@@ -5,13 +5,17 @@ import "./avisited.css";
 const NotFoundPage = () => {
     return (
         <div style={styles.container}>
+            <img src="/album_placeholder.png" alt="404" style={styles.image} />
             <h1>404 - Page Not Found</h1>
             <p>Oops! The page you are looking for does not exist.</p>
-            <button style={styles.homeLinkButton}>
+            {/* <button style={styles.homeLinkButton}>
                 <Link to="/" style={styles.homeLink}>Go back to Home</Link>
-            </button>
+            </button> */}
+            <Link to="/" style={styles.homeLink}>
+                <button style={styles.homeLinkButton}>Go back to Home</button>
+            </Link>
             {/* <Link to="/" style={styles.homeLink}>Go back to Home</Link> */}
-        </div>
+        </div >
     );
 };
 
@@ -26,6 +30,11 @@ const styles = {
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
+        margin: "auto",
+    },
+    image: {
+        width: "200px",
+        height: "200px",
         margin: "auto",
     },
     homeLinkButton: {

@@ -9,6 +9,7 @@ const ComparePage = () => {
         fetchAlbums();
     }, []);
 
+    // for now db is small but in future we might use pagination
     const fetchAlbums = async () => {
         setLoading(true);
         try {
@@ -28,13 +29,14 @@ const ComparePage = () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ winner_id: winnerId, loser_id: loserId }), // Ensure correct JSON keys
             });
-            console.log(response);
+            // console.log(response);
 
             if (!response.ok) {
                 throw new Error("Failed to update rating");
             }
 
-            fetchAlbums(); // Load new albums after voting
+            // Load new albums after voting
+            fetchAlbums();
         } catch (error) {
             console.error("Error updating rating:", error);
         }

@@ -7,7 +7,7 @@ const Navbar = () => {
 
     const fetchRandomAlbum = async (event) => {
         event.preventDefault(); // Prevent default link behavior
-        // setLoading(true); // Optional: show loading state
+        // setLoading(true);
         try {
             const response = await fetch("http://127.0.0.1:8000/random_album");
             if (!response.ok) throw new Error("Failed to fetch");
