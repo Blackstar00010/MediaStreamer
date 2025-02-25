@@ -6,6 +6,9 @@
   min-height: 100vh;
   min-width: 100vw;
   box-sizing: border-box;
+  text-align: center;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 .navbar {

@@ -116,6 +116,7 @@ const styles = {
     albumContents: {
         textAlign: "left",
         width: "80%",
+        // width: "100vw",
         maxHeight: "90vh",
         margin: "auto",
         display: "flex",

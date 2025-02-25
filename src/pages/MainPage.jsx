@@ -17,28 +17,15 @@ function MainPage({ setCurrentSongID }) {
             <h1>All Albums</h1>
             <div style={styles.gridContainer}>
                 {albums.map((album) => (
-                    <Link to={`/album/${album.key}`} key={album.key}>
-                        <div style={styles.card}>
-                            <img
-                                src={album.art || "/album_placeholder.png"}
-                                alt={album.name || "Unclassified"}
-                                style={styles.albumArt} />
-                            <p>{album.name}</p>
-                            <p>{album.artist}</p>
-                        </div>
-                    </Link>
-                ))}
-
-                {/* {songs.map((song) => (
-                    <div key={song.id} style={styles.card}>
+                    <div key={album.key} style={styles.card} onClick={() => navigate(`/album/${album.key}`)}>
                         <img
-                            src={song.album_art || null}
-                            alt={song.title}
+                            src={album.art || "/album_placeholder.png"}
+                            alt={album.name || "Unclassified"}
                             style={styles.albumArt} />
-                        <p>{song.title}</p>
-                        <p>{song.artist}</p>
+                        <p>{album.name}</p>
+                        <p>{album.artist}</p>
                     </div>
-                ))} */}
+                ))}
             </div>
         </>
     );
@@ -48,34 +35,16 @@ const styles = {
     container: {
         textAlign: "center",
     },
-    inputContainer: {
-        margin: "20px 0",
-        display: "flex",
-        justifyContent: "center",
-        gap: "10px",
-    },
-    input: {
-        padding: "10px",
-        fontSize: "16px",
-        width: "150px",
-    },
-    button: {
-        padding: "10px",
-        backgroundColor: "#444",
-        color: "white",
-        border: "none",
-        cursor: "pointer",
-        fontSize: "16px",
-    },
     gridContainer: {
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+        gridAutoRows: "minmax(auto, max-content)", // Match row height to content
         gap: "15px",
         padding: "20px",
         // enable scrolling
-        overflowY: 'auto',
-        // set the height of the container
         height: '80vh',
+        overflowY: 'auto',
+        alignItems: "stretch",  // asdfasdf
     },
     card: {
         backgroundColor: "#222",
@@ -83,10 +52,19 @@ const styles = {
         padding: "10px",
         textAlign: "center",
         borderRadius: "8px",
+        textDecoration: "none",
+        // maxHeight: "200px",
+        height: "fit-content",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
     },
     albumArt: {
         width: "100%",
         height: "auto",
+        aspectRatio: "1 / 1", // Maintain square aspect ratio
+        objectFit: "cover", // Ensures images scale properly
         borderRadius: "5px",
     },
 };
