@@ -4,6 +4,7 @@ import AudioPlayer from "./components/AudioPlayer";
 import Navbar from "./components/Navbar";
 import MainPage from "./pages/MainPage";
 import AlbumPage from "./pages/AlbumPage";
+import ComparePage from "./pages/ComparePage";
 // import MediaPage from "./pages/MediaPage";
 // import SettingsPage from "./pages/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -27,6 +28,7 @@ const App = () => {
                     <Route path="/album/:albumID" element={<AlbumPage setCurrentSongID={setCurrentSongID} setQueue={setQueue} setBackQueue={setBackQueue} />} />
                     {/* <Route path="/media/:id" element={<MediaPage />} />
                     <Route path="/settings" element={<SettingsPage />} /> */}
+                    <Route path="/compare" element={<ComparePage />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
 

@@ -7,6 +7,7 @@ import mimetypes
 import random
 from backend.config import DB_PATH
 from backend.db.scan_media import get_artist_id_maps
+import logging
 
 app = FastAPI()
 
@@ -15,7 +16,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -145,17 +146,19 @@ def stream_song(song_id: int, request: Request):
 
 @app.get("/albums")
 def get_albums():
-    """Fetch all albums from the database."""
+    """Fetch all albums from the database, sorted by rating."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT album_id, album_name, album_art FROM albums")
+    cursor.execute("SELECT album_id, album_name, album_art, album_rating FROM albums")
     albums = cursor.fetchall()
     conn.close()
 
-    return [
-        {"key": album[0], "name": album[1], "art": album[2], "artist": None}
+    ret = [
+        {"key": album[0], "name": album[1], "art": album[2], "artist": None, "rating": album[3]}
         for album in albums
     ]
+    ret.sort(key=lambda x: x["rating"], reverse=True)
+    return ret
 
 
 @app.get("/album/{album_id}")
@@ -236,3 +239,82 @@ def get_random_album():
     random_album_id = random.choice(album_ids)
     print(random_album_id)
     return {"album_id": random_album_id}
+
+
+def get_album_name(album_id):
+    """Fetch the name of an album by ID."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT album_name FROM albums WHERE album_id = ?", (album_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result[0] if result else None
+
+
+def get_elo_rating(album_id):
+    """Fetch the Elo rating of an album."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT album_rating FROM albums WHERE album_id = ?", (album_id,))
+    result = cursor.fetchone()
+    conn.close()
+    if not result:
+        logging.info(f"No rating found for album ID {album_id}")
+    return result[0] if result else 1000
+
+@app.get("/compare_albums")
+def compare_albums():
+    """Fetch two random albums for comparison."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT album_id, album_name, album_art, album_rating FROM albums WHERE album_id != 0 ORDER BY RANDOM() LIMIT 2")
+    albums = [
+        # {"id": row[0], "name": row[1], "artist": row[2], "album_art": row[3], "elo": row[4]}
+        {"id": row[0], "name": row[1], "art": row[2], "rating": row[3]}
+        for row in cursor.fetchall()
+    ]
+    conn.close()
+
+    if len(albums) < 2:
+        raise HTTPException(status_code=404, detail="Not enough albums to compare.")
+
+    return {"albums": albums}
+
+
+
+@app.post("/update_rating")
+async def update_rating(request: Request):
+    """Update the Elo ratings of two albums after a comparison."""
+    data = await request.json()  # Manually parse JSON
+    print("Received data:", data)  # Debugging log
+
+    winner_id = data.get("winner_id")
+    loser_id = data.get("loser_id")
+
+    if not isinstance(winner_id, int) or not isinstance(loser_id, int):
+        raise HTTPException(status_code=400, detail="Invalid input data")
+
+    # Fetch current ratings
+    winner_elo = get_elo_rating(winner_id)
+    loser_elo = get_elo_rating(loser_id)
+
+    K = 32  # Elo rating adjustment factor
+
+    # Expected scores
+    expected_winner = 1 / (1 + 10 ** ((loser_elo - winner_elo) / 400))
+    expected_loser = 1 - expected_winner
+
+    # Update ratings
+    new_winner_elo = round(winner_elo + K * (1 - expected_winner))
+    new_loser_elo = round(loser_elo + K * (0 - expected_loser))
+
+    # Update database
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE albums SET album_rating = ? WHERE album_id = ?", (new_winner_elo, winner_id))
+    cursor.execute("UPDATE albums SET album_rating = ? WHERE album_id = ?", (new_loser_elo, loser_id))
+    conn.commit()
+    conn.close()
+
+    return {"message": "Elo ratings updated", "winner_new_elo": new_winner_elo, "loser_new_elo": new_loser_elo}
+

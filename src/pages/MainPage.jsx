@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import "./MainPage.css";
 
 function MainPage({ setCurrentSongID }) {
     const navigate = useNavigate();
@@ -15,9 +16,9 @@ function MainPage({ setCurrentSongID }) {
     return (
         <>
             <h1>All Albums</h1>
-            <div style={styles.gridContainer}>
+            <div style={styles.gridContainer} id="album-grid">
                 {albums.map((album) => (
-                    <div key={album.key} style={styles.card} onClick={() => navigate(`/album/${album.key}`)}>
+                    <div className="album-card" key={album.key} style={styles.card} onClick={() => navigate(`/album/${album.key}`)}>
                         <img
                             src={album.art || "/album_placeholder.png"}
                             alt={album.name || "Unclassified"}
@@ -59,6 +60,10 @@ const styles = {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
+        transition: "transform 0.2s ease-in-out",
+        "&:hover": {
+            transform: "scale(1.05)",
+        },
     },
     albumArt: {
         width: "100%",

@@ -1,0 +1,27 @@
+#compare-container {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    padding: 20px;
+}
+
+#compare-container .album-card {
+    max-width: 500px;
+    text-align: center;
+    background-color: #333;
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+}
+
+#compare-container .album-card:hover {
+    transform: scale(1.05);
+}
+
+#compare-container .album-art {
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    border-radius: 8px;
+}

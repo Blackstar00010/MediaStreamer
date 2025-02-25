@@ -43,6 +43,7 @@ ALBUM_METADATA_KEY_TYPES = {
     "album_path": "TEXT",
     "album_art": "TEXT",
     # "album_art_path": "TEXT",
+    "album_rating": "REAL",
 }
 
 if __name__ == "__main__":

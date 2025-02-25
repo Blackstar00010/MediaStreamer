@@ -11,12 +11,17 @@ from mutagen.mp4 import MP4
 import sys
 print(sys.path)
 from backend.config import MEDIA_DIR, DB_PATH, SUPPORTED_EXTS, AUDIO_METADATA_KEY_TYPES, ID_KEYS, IDS_KEYS
+import backend.config as config
 from backend.db import utils
 
 
 def ensure_default_entries(cursor):
+    """Ensure default entries of NULL for artist and album where we cannot fetch them. Also, adds default elo rating for albums."""
     cursor.execute("INSERT OR IGNORE INTO artists (artist_id, artist_name) VALUES (0, NULL)")
     cursor.execute("INSERT OR IGNORE INTO albums (album_id, album_name) VALUES (0, NULL)")
+    cursor.execute("INSERT OR IGNORE INTO genres (genre_id, genre_name) VALUES (0, NULL)")
+    cursor.execute("INSERT OR IGNORE INTO organizations (organization_id, organization_name) VALUES (0, NULL)")
+    
 
 
 def check_columns(cursor: sqlite3.Cursor, table: str, columns_and_types: dict) -> list:
@@ -342,8 +347,12 @@ def link_albumartists(cursor: sqlite3.Cursor):
     logging.info("Linking artists to albums completed.")
         
     
-
-
+def fill_album_ratings(cursor: sqlite3.Cursor):
+    """Fill in album ratings based on track ratings."""
+    # cursor.execute("UPDATE albums SET album_rating = 1000 WHERE album_id IS NULL")
+    cursor.execute("UPDATE OR IGNORE albums SET album_rating = 1000 WHERE album_rating IS NULL")
+    
+    
 def main():
     if not os.path.exists(MEDIA_DIR):
         logging.error(
@@ -359,13 +368,16 @@ def main():
     cursor = conn.cursor()
 
     # Ensure default entries of NULL for artist and album where we cannot fetch them
-    ensure_default_entries(cursor)
     cols_to_check = AUDIO_METADATA_KEY_TYPES.copy()
     cols_to_check["file_path"] = "TEXT"
     check_columns(cursor, "music", cols_to_check)
+    check_columns(cursor, "artists", {"artist_name": "TEXT"})
+    check_columns(cursor, "albums", config.ALBUM_METADATA_KEY_TYPES)
+    ensure_default_entries(cursor)
     
     scan_basics(cursor)
     link_albumartists(cursor)
+    fill_album_ratings(cursor)
     
     conn.commit()
     conn.close()
