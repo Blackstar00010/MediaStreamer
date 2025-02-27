@@ -6,7 +6,8 @@ import os
 import mimetypes
 import random
 from backend.config import DB_PATH
-from backend.db.scan_media import get_artist_id_maps
+from backend.db import queries
+# from backend.db.scan_media import get_artist_id_maps
 import logging
 
 app = FastAPI()
@@ -27,59 +28,40 @@ def read_root():
 @app.get("/songs")
 def get_songs():
     """Fetch all songs from the database."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT music_id, title FROM music")
-    songs = cursor.fetchall()
-    conn.close()
-
-    return [
-        {"id": song[0], "title": song[1], 'artist': None, 'album': None}
-        for song in songs
-    ]
+    data = queries.get_musics_by_musicid(
+        cursor=None, music_ids=None, 
+        column_names=["music_id", "title", "artist", "album"])
+    return data
 
 
 @app.get("/songs/{song_id}")
 def get_song(song_id: int):
     """Fetch metadata for a specific song by ID."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM music WHERE id = ?", (song_id,))
-    row = cursor.fetchone()
-    conn.close()
-
-    if not row:
+    data = queries.get_data_by_musicid(
+        cursor=None, music_ids=[song_id], 
+        column_names={"music": ["music_id", "title", "file_path"], "artists": ["artist_name"], "albums": ["album_name"]})
+    if not data:
         raise HTTPException(status_code=404, detail="Song not found")
-
-    # Get column names dynamically
-    columns = [desc[0] for desc in cursor.description]
-
-    # Convert row data into a dictionary
-    song_data = dict(zip(columns, row))
-
-    return song_data
+    return data[song_id]
 
 
 def get_song_path(song_id: int) -> str:
     """Fetch the file path of a song by ID from the database."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT file_path FROM music WHERE music_id = ?", (song_id,))
-    row = cursor.fetchone()
-    conn.close()
-
-    if not row:
-        return None
-    return row[0]  # Extract file path from the result
+    data = queries.get_data_by_musicid(
+        cursor=None, music_ids=[song_id], 
+        column_names={"music": ["file_path"]}
+    )
+    # print(data)
+    if not data:
+        raise HTTPException(status_code=404, detail="Song not found")
+    return data[song_id]["file_path"]
 
 
 @app.get("/stream/{song_id}")
 def stream_song(song_id: int, request: Request):
     """Stream an audio file by song ID."""
     file_path = get_song_path(song_id)
-    if not file_path:
-        raise HTTPException(status_code=404, detail="Song not found")
-    file_size = os.path.getsize(file_path)  # TODO: add file size to db
+    file_size = os.path.getsize(file_path)  # TODO: add file size to db?
 
     # NOTE: without html5 audio player, the browser will download the file if the mime type is not audio/mpeg
     mime_type, _ = mimetypes.guess_type(file_path)
@@ -128,7 +110,6 @@ def stream_song(song_id: int, request: Request):
         "Accept-Ranges": "bytes",
     }
     try:
-
         def full_file_iterator():
             with open(file_path, "rb") as f:
                 while chunk := f.read(1024 * 64):  # Read in 64 KB chunks
@@ -147,18 +128,20 @@ def stream_song(song_id: int, request: Request):
 @app.get("/albums")
 def get_albums():
     """Fetch all albums from the database, sorted by rating."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT album_id, album_name, album_art, album_rating FROM albums")
-    albums = cursor.fetchall()
-    conn.close()
-
-    ret = [
-        {"key": album[0], "name": album[1], "art": album[2], "artist": None, "rating": album[3]}
-        for album in albums
-    ]
-    ret.sort(key=lambda x: x["rating"], reverse=True)
-    return ret
+    album_data = queries.get_albums_by_albumid(
+        cursor=None, album_ids=None, 
+        column_names=["album_id", "album_name", "album_art", "album_rating"])
+    # because album-artist link is many-to-many, we need to fetch artist data separately
+    artists = queries.get_artists_by_albumid(
+        cursor=None, album_ids=None, 
+        column_names=["artist_name"])
+    # merge artist data into album data
+    for album_id in album_data.keys():
+        album_data[album_id]["artist"] = artists.get(album_id, None)
+    # sort by rating, by default
+    album_data = list(album_data.values())
+    album_data.sort(key=lambda x: x["album_rating"], reverse=True)
+    return album_data
 
 
 @app.get("/album/{album_id}")
@@ -168,60 +151,75 @@ def get_album(album_id: int):
     cursor = conn.cursor()
 
     # Fetch album name and album art
-    cursor.execute("SELECT album_name FROM albums WHERE album_id = ?", (album_id,))
-    album_row = cursor.fetchone()
-    if not album_row:
-        raise HTTPException(status_code=404, detail="Album not found")
+    try:
+        data = queries.get_albums_by_albumid(cursor, [album_id], ["album_name", "album_art"])
+    except ValueError as e:
+        if e.args[0].startswith("Album ID(s) "):
+            raise HTTPException(status_code=404, detail="Album not found")
+        else:
+            raise e
+    album_name = data[album_id]["album_name"]
+    album_art = data[album_id]["album_art"]
     
-    album_name = album_row[0]
-
-    # Fetch album art (if available)
-    cursor.execute("SELECT album_art FROM albums WHERE album_id = ?", (album_id,))
-    album_art_row = cursor.fetchone()
-    album_art = album_art_row[0] if album_art_row else None
+    artists = queries.get_artists_by_albumid(cursor, [album_id], ["artist_name"])
+    album_artists = [artist["artist_name"] for artist in artists.get(album_id, [])]
+    if album_artists:
+        album_artists.sort()
+        album_artists = ', '.join(album_artists)
 
     # Fetch tracks in the album (including music IDs)
-    cursor.execute("SELECT music_id, tracknumber, title, file_path FROM music WHERE album_id = ?", (album_id,))
-    tracks = cursor.fetchall()
-
-    # Fetch artist IDs associated with these tracks
-    music_ids = [track[0] for track in tracks]
-    track_artist_map = get_artist_id_maps(cursor, music_ids)
-    artists = {}
-    for music_id, artist_ids in track_artist_map.items():
-        cursor.execute(f"SELECT artist_name FROM artists WHERE artist_id IN ({','.join('?' * len(artist_ids))})", artist_ids)
-        artist_names = [row[0] for row in cursor.fetchall()]
-        artists[music_id] = ', '.join(artist_names) if artist_names else None
-
-    # Fetch album artists
-    cursor.execute("SELECT artist_id from artists_albums WHERE album_id = ?", (album_id,))
-    artist_ids = [row[0] for row in cursor.fetchall()]
-    cursor.execute(f"SELECT artist_name FROM artists WHERE artist_id IN ({','.join('?' * len(artist_ids))})", artist_ids)
-    album_artists = [row[0] for row in cursor.fetchall()]
-    album_artists.sort()
-    album_artists = ', '.join(album_artists)
-
-    conn.close()
-    
-    # Process the response
+    music_ids = queries.get_musicids_by_albumid(cursor, album_id)[album_id]
+    music_data = list(queries.get_data_by_musicid(cursor, music_ids, {"music": ["music_id", "tracknumber", "title", "file_path"], "artists": ["artist_name"]}).values())
+    print(music_data[0])
     ret = {
         "album_id": album_id,
         "album_name": album_name,
         "album_art": album_art,
         "album_artists": album_artists,
-        "tracks": [
-            {
-                "id": track[0],
-                "track_number": track[1],
-                "title": track[2],
-                "artist": artists.get(track[0], None),
-            }
-            for track in tracks
-        ]
+        "tracks": music_data
     }
-
-    # print(ret)
     return ret
+    # cursor.execute("SELECT music_id, tracknumber, title, file_path FROM music WHERE album_id = ?", (album_id,))
+    # tracks = cursor.fetchall()
+
+    # # Fetch artist IDs associated with these tracks
+    # music_ids = [track[0] for track in tracks]
+    # track_artist_map = get_artist_id_maps(cursor, music_ids)
+    # artists = {}
+    # for music_id, artist_ids in track_artist_map.items():
+    #     cursor.execute(f"SELECT artist_name FROM artists WHERE artist_id IN ({','.join('?' * len(artist_ids))})", artist_ids)
+    #     artist_names = [row[0] for row in cursor.fetchall()]
+    #     artists[music_id] = ', '.join(artist_names) if artist_names else None
+
+    # # Fetch album artists
+    # cursor.execute("SELECT artist_id from artists_albums WHERE album_id = ?", (album_id,))
+    # artist_ids = [row[0] for row in cursor.fetchall()]
+    # cursor.execute(f"SELECT artist_name FROM artists WHERE artist_id IN ({','.join('?' * len(artist_ids))})", artist_ids)
+    # album_artists = [row[0] for row in cursor.fetchall()]
+    # album_artists.sort()
+    # album_artists = ', '.join(album_artists)
+
+    # conn.close()
+    
+    # # Process the response
+    # ret = {
+    #     "album_id": album_id,
+    #     "album_name": album_name,
+    #     "album_art": album_art,
+    #     "album_artists": album_artists,
+    #     "tracks": [
+    #         {
+    #             "id": track[0],
+    #             "track_number": track[1],
+    #             "title": track[2],
+    #             "artist": artists.get(track[0], None),
+    #         }
+    #         for track in tracks
+    #     ]
+    # }
+
+    # # print(ret)
+    # return ret
 
 
 @app.get("/random_album")
@@ -265,21 +263,22 @@ def get_elo_rating(album_id):
 @app.get("/compare_albums")
 def compare_albums():
     """Fetch two random albums for comparison."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT album_id, album_name, album_art, album_rating FROM albums WHERE album_id != 0 ORDER BY RANDOM() LIMIT 2")
-    albums = [
-        # {"id": row[0], "name": row[1], "artist": row[2], "album_art": row[3], "elo": row[4]}
-        {"id": row[0], "name": row[1], "art": row[2], "rating": row[3]}
-        for row in cursor.fetchall()
-    ]
-    conn.close()
-
-    if len(albums) < 2:
+    album_ids = queries.get_all_entries(None, "albums", ["album_id"])
+    if len(album_ids) < 2:
         raise HTTPException(status_code=404, detail="Not enough albums to compare.")
-
-    return {"albums": albums}
-
+    random.shuffle(album_ids)
+    album_ids = [item[0] for item in album_ids[:2]]
+    data = queries.get_albums_by_albumid(
+        cursor=None, album_ids=album_ids,
+        column_names=["album_id", "album_name", "album_art", "album_rating"])
+    ret = [data[album_ids[0]], data[album_ids[1]]]
+    
+    artists = queries.get_artists_by_albumid(
+        cursor=None, album_ids=album_ids, 
+        column_names=["artist_name"])
+    for i in range(2):
+        ret[i]["album_artists"] = [item['artist_name'] for item in artists.get(album_ids[i], [])]
+    return ret
 
 
 @app.post("/update_rating")

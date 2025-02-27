@@ -22,13 +22,6 @@ export const fetchAllAlbums = async () => {
 };
 
 // Fetch two random albums for comparison
-// export const fetchComparisonAlbums = async () => {
-//     fetchAllAlbums().then((data) => {
-//         const album1 = data[Math.floor(Math.random() * data.length)];
-//         const album2 = data[Math.floor(Math.random() * data.length)];
-//         return [album1, album2];
-//     });
-// }
 export const fetchComparisonAlbums = async () => {
     const response = await fetch(`${API_URL}/compare_albums`);
     if (!response.ok) throw new Error("Failed to fetch comparison albums");

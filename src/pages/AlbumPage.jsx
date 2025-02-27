@@ -51,17 +51,17 @@ const AlbumPage = ({ setCurrentSongID, setQueue, setBackQueue }) => {
     }, [albumID, navigate]);
 
     const PlaySong = (track) => {
-        setCurrentSongID(track.id);
-        setQueue(tracks.slice(track.track_number).map((track) => track.id));
-        var newBackQueue = tracks.slice(0, track.track_number - 1).map((track) => track.id);
+        setCurrentSongID(track.music_id);
+        setQueue(tracks.slice(track.tracknumber).map((track) => track.music_id));
+        var newBackQueue = tracks.slice(0, track.tracknumber - 1).map((track) => track.music_id);
         newBackQueue.reverse();
         setBackQueue(newBackQueue);
-        console.log('queue: ', tracks.slice(track.track_number).map((track) => track.id));
+        console.log('queue: ', tracks.slice(track.tracknumber).map((track) => track.music_id));
         console.log('backQueue: ', newBackQueue);
     };
 
     // sort by track number
-    tracks.sort((a, b) => a.track_number - b.track_number);
+    tracks.sort((a, b) => a.tracknumber - b.tracknumber);
 
     return (
         <div id="album-contents" style={styles.albumContents} className={isVertical ? "vertical" : "horizontal"} ref={albumContentsRef}>
@@ -79,10 +79,10 @@ const AlbumPage = ({ setCurrentSongID, setQueue, setBackQueue }) => {
             <div id="tracklist-container" style={styles.tracklistContainer} className={isVertical ? "vertical" : "horizontal"}>
                 <ul id="tracklist" style={styles.tracklist}>
                     {tracks.map((track) => (
-                        <li key={track.track_number} style={styles.trackItem}>
+                        <li key={track.tracknumber} style={styles.trackItem}>
                             <button onClick={() => PlaySong(track)} style={styles.trackButton}>
                                 <div style={{ marginRight: "10px", display: "inline-block", width: "30px" }}>
-                                    {track.track_number}
+                                    {track.tracknumber}
                                 </div>
                                 <div style={{ textAlign: "left", display: "inline-block" }}>
                                     <div>{track.title}</div>

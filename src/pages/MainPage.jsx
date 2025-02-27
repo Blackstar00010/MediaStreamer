@@ -9,7 +9,10 @@ function MainPage() {
 
     useEffect(() => {
         fetchAllAlbums()
-            .then((data) => setAlbums(data))
+            .then((data) => {
+                console.log("Fetched albums:", data);
+                setAlbums(data);
+            })
             .catch((error) => console.error("Error fetching albums:", error));
     }, []);
 
@@ -18,13 +21,15 @@ function MainPage() {
             <h1>All Albums</h1>
             <div style={styles.gridContainer} id="album-grid">
                 {albums.map((album) => (
-                    <div className="album-card" key={album.key} style={styles.card} onClick={() => navigate(`/album/${album.key}`)}>
+                    <div className="album-card" key={album.album_id} style={styles.card} onClick={() => navigate(`/album/${album.album_id}`)}>
                         <img
-                            src={album.art || "/album_placeholder.png"}
-                            alt={album.name || "Unclassified"}
+                            src={album.album_art || "/album_placeholder.png"}
+                            alt={album.album_name || "Unclassified"}
                             style={styles.albumArt} />
-                        <p>{album.name}</p>
-                        <p>{album.artist}</p>
+                        <p>{album.album_name}</p>
+                        <p>
+                            {album.artist && album.artist.map((artist) => artist.artist_name).join(", ")}
+                        </p>
                     </div>
                 ))}
             </div>

@@ -8,21 +8,17 @@ from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.wavpack import WavPack
 from mutagen.mp4 import MP4
-import sys
-print(sys.path)
-from backend.config import MEDIA_DIR, DB_PATH, SUPPORTED_EXTS, AUDIO_METADATA_KEY_TYPES, ID_KEYS, IDS_KEYS
 import backend.config as config
 from backend.db import utils
 
 
-def ensure_default_entries(cursor):
+def ensure_default_entries(cursor: sqlite3.Cursor):
     """Ensure default entries of NULL for artist and album where we cannot fetch them. Also, adds default elo rating for albums."""
     cursor.execute("INSERT OR IGNORE INTO artists (artist_id, artist_name) VALUES (0, NULL)")
     cursor.execute("INSERT OR IGNORE INTO albums (album_id, album_name) VALUES (0, NULL)")
     cursor.execute("INSERT OR IGNORE INTO genres (genre_id, genre_name) VALUES (0, NULL)")
     cursor.execute("INSERT OR IGNORE INTO organizations (organization_id, organization_name) VALUES (0, NULL)")
     
-
 
 def check_columns(cursor: sqlite3.Cursor, table: str, columns_and_types: dict) -> list:
     """Check if the columns exist in the table. If not, add them. Returns newly added columns."""
@@ -79,11 +75,11 @@ def extract_metadata(file_path: str) -> dict:
         return None
     try:
         ret = {"duration": audio.info.length if audio.info else 0, "file_path": file_path}
-        for key in AUDIO_METADATA_KEY_TYPES.keys():
+        for key in config.AUDIO_METADATA_KEY_TYPES.keys():
             if key in ret.keys():
                 continue
             ret[key.replace("_id", "")] = audio.get(key.replace("_id", ""), [None])[0]
-        for key in IDS_KEYS:
+        for key in config.IDS_KEYS:
             ret[key] = audio.get(key, [None])[0]
         return ret
     except Exception as e:
@@ -214,13 +210,13 @@ def scan_basics(cursor: sqlite3.Cursor):
     """Scan media folder and store metadata in SQLite."""
     
     # keys for music table
-    keys_musics = list(AUDIO_METADATA_KEY_TYPES.keys()) + ["file_path"]
+    keys_musics = list(config.AUDIO_METADATA_KEY_TYPES.keys()) + ["file_path"]
 
     # Scan files
-    for root, _, files in os.walk(MEDIA_DIR):
+    for root, _, files in os.walk(config.MEDIA_DIR):
         files = [file for file in files 
                  if not file.startswith(".") 
-                 and any(file.lower().endswith(ext) for ext in SUPPORTED_EXTS)]
+                 and any(file.lower().endswith(ext) for ext in config.SUPPORTED_EXTS)]
         files.sort()
         for i, file in enumerate(files):
             file_path = os.path.join(root, file)
@@ -239,9 +235,7 @@ def scan_basics(cursor: sqlite3.Cursor):
             metadata['totaldiscs'] = metadata.get('totaldiscs', None) or 1
             metadata['albumartist'] = metadata.get('albumartist', None) or metadata.get('artist', None)
             
-            for key in ID_KEYS:
-                if metadata.get(key, None) is None:
-                    print('asdf')  # debug
+            for key in config.ID_KEYS:
                 result = get_or_create_id(cursor, key, metadata.get(key, None))
                 metadata[f"{key}_id"] = result[0]
                 if not result[1] or key != "album":
@@ -259,7 +253,7 @@ def scan_basics(cursor: sqlite3.Cursor):
                 )
                     
             ids_stuff = {}
-            for key in IDS_KEYS:
+            for key in config.IDS_KEYS:
                 values_to_seek = metadata.get(key, None)
                 values_to_seek = values_to_seek.split(", ") if values_to_seek else []
                 ids_stuff[key] = get_or_create_ids(cursor, key, values_to_seek)
@@ -277,7 +271,7 @@ def scan_basics(cursor: sqlite3.Cursor):
             )
             music_id = cursor.lastrowid
 
-            for key in IDS_KEYS:
+            for key in config.IDS_KEYS:
                 for id_ in ids_stuff[key]:
                     cursor.execute(
                         f"INSERT OR REPLACE INTO {key}s_music ({key}_id, music_id) VALUES (?, ?)",
@@ -354,21 +348,21 @@ def fill_album_ratings(cursor: sqlite3.Cursor):
     
     
 def main():
-    if not os.path.exists(MEDIA_DIR):
+    if not os.path.exists(config.MEDIA_DIR):
         logging.error(
-            f"Media directory not found at {MEDIA_DIR}. Please check the configuration."
+            f"Media directory not found at {config.MEDIA_DIR}. Please check the configuration."
         )
         return
-    if not os.path.exists(DB_PATH):
+    if not os.path.exists(config.DB_PATH):
         logging.info("Database not found. Creating tables...")
         import db_setup
         db_setup.create_tables()
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH)
     cursor = conn.cursor()
 
     # Ensure default entries of NULL for artist and album where we cannot fetch them
-    cols_to_check = AUDIO_METADATA_KEY_TYPES.copy()
+    cols_to_check = config.AUDIO_METADATA_KEY_TYPES.copy()
     cols_to_check["file_path"] = "TEXT"
     check_columns(cursor, "music", cols_to_check)
     check_columns(cursor, "artists", {"artist_name": "TEXT"})

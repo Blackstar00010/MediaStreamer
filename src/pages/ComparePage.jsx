@@ -15,8 +15,8 @@ const ComparePage = () => {
         setLoading(true);
         try {
             const data = await fetchComparisonAlbums();
-            console.log(data);
-            setAlbums(data.albums);
+            // console.log(data);
+            setAlbums(data);
         } catch (error) {
             console.error("Error fetching albums:", error);
         }
@@ -40,11 +40,15 @@ const ComparePage = () => {
     return (
         <div id="compare-container">
             {albums.map((album, index) => (
-                <div key={album.id} className="album-card" onClick={() => chooseAlbum(album.id, albums[1 - index].id)}>
-                    <img src={album.art || "/album_placeholder.png"} alt={album.name} className="album-art" />
-                    <h3>{album.name}</h3>
-                    {/* <p>{album.artist}</p> */}
-                    <p>Rating Score: {album.rating}</p>
+                <div key={album.album_id} className="album-card" onClick={() => chooseAlbum(album.album_id, albums[1 - index].album_id)}>
+                    <img src={album.album_art || "/album_placeholder.png"} alt={album.album_name} className="album-art" />
+                    <h3>{album.album_name}</h3>
+                    <p>
+                        {
+                            album.album_artists && album.album_artists.join(", ")
+                        }
+                    </p>
+                    <p>Rating Score: {album.album_rating}</p>
                 </div>
             ))}
         </div>
